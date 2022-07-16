@@ -27,6 +27,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "bsp_uart.h"
+#include "bsp_can.h"
+#include "bsp_dwt.h"
 
 /* USER CODE END Includes */
 
@@ -98,7 +101,9 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
-
+    DWT_Init(168);
+    CAN_Init();
+    Remote_Control_init();
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

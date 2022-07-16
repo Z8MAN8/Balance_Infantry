@@ -24,6 +24,7 @@
 #include "task.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "bsp_uart.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -265,7 +266,65 @@ void USART1_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
+    if(huart3.Instance->SR & UART_FLAG_RXNE)//??????????
+    {
+        __HAL_UART_CLEAR_PEFLAG(&huart3);
+    }
+    else if(USART3->SR & UART_FLAG_IDLE)
+    {
+        static uint16_t this_time_rx_len = 0;
 
+        __HAL_UART_CLEAR_PEFLAG(&huart3);
+
+        if ((hdma_usart3_rx.Instance->CR & DMA_SxCR_CT) == RESET)
+        {
+            /* Current memory buffer used is Memory 0 */
+
+            //disable DMA
+
+            __HAL_DMA_DISABLE(&hdma_usart3_rx);
+
+            //get receive data length, length = set_data_length - remain_length
+            this_time_rx_len = SBUS_RX_BUF_NUM - hdma_usart3_rx.Instance->NDTR;
+
+            //reset set_data_lenght
+            hdma_usart3_rx.Instance->NDTR = SBUS_RX_BUF_NUM;
+
+            //set memory buffer 1
+            hdma_usart3_rx.Instance->CR |= DMA_SxCR_CT;
+
+
+            __HAL_DMA_ENABLE(&hdma_usart3_rx);
+
+            if(this_time_rx_len == RC_FRAME_LENGTH)
+            {
+                Remote_Data_handle(&rc, sbus_rx_buf[0]);
+            }
+        }
+        else
+        {
+            /* Current memory buffer used is Memory 1 */
+            //disable DMA
+            __HAL_DMA_DISABLE(&hdma_usart3_rx);
+
+            //get receive data length, length = set_data_length - remain_length
+            this_time_rx_len = SBUS_RX_BUF_NUM - hdma_usart3_rx.Instance->NDTR;
+
+            //reset set_data_lenght
+            hdma_usart3_rx.Instance->NDTR = SBUS_RX_BUF_NUM;
+
+            //set memory buffer 0
+            DMA1_Stream1->CR &= ~(DMA_SxCR_CT);
+
+            //enable DMA
+            __HAL_DMA_ENABLE(&hdma_usart3_rx);
+
+            if(this_time_rx_len == RC_FRAME_LENGTH)
+            {
+                Remote_Data_handle(&rc, sbus_rx_buf[1]);
+            }
+        }
+    }
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
