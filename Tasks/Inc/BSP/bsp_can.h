@@ -8,6 +8,11 @@
 
 # define CHASSIS_CAN hcan1
 #define CAN_UP_TX_INFO 0x134
+/* 上下板CAN通信的扩展标识符 */
+#define CAN_RPY_TX          0x140   /* 底盘跟随云台相对角度 */
+#define CAN_ODOM_TX_ONE     0x141   /* odom数据帧第一帧 */
+#define CAN_ODOM_TX_TWO     0x142   /* odom数据帧第二帧 */
+#define CAN_ODOM_TX_THREE   0x143   /* odom数据帧第二帧 */
 
 /**
  * @brief  CAN消息的ID

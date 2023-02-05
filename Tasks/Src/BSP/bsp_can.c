@@ -77,23 +77,22 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
         }
     }
     if (hcan == &hcan2) {
-        switch (rx_header.StdId) {
-            case CAN_UP_TX_INFO: {
-                //gim.ctrl_mode= rx_data[0];
-                yaw_relative_angle=*(float*)&rx_data[0];
+        if(rx_header.IDE) {             // Ê¹ÓÃÀ©Õ¹ID
+            switch (rx_header.ExtId) {
+                case CAN_RPY_TX:{
+                    //gim.ctrl_mode= rx_data[0];
+                    yaw_relative_angle=*(float*)&rx_data[0];
 //                yaw_angle_ref=*(float*)&rx_data[4];
-                /*yaw_angle_ref=0;
-                cap_open_flag=0x1&rx_data[6];
-                fric_wheel_run=(0x2&rx_data[6])>>1;
-                fric_flag=(0xC&rx_data[6])>>2;
-                yaw_motor_speed=rx_data[4];
-                yaw_motor_speed=yaw_motor_speed<<8;
-                yaw_motor_speed=yaw_motor_speed|rx_data[5];*/
-
+                    /*yaw_angle_ref=0;
+                    cap_open_flag=0x1&rx_data[6];
+                    fric_wheel_run=(0x2&rx_data[6])>>1;
+                    fric_flag=(0xC&rx_data[6])>>2;
+                    yaw_motor_speed=rx_data[4];
+                    yaw_motor_speed=yaw_motor_speed<<8;
+                    yaw_motor_speed=yaw_motor_speed|rx_data[5];*/
+                }break;
+                default:break;
             }
-            default: {
-            }
-                break;
         }
     }
 }
