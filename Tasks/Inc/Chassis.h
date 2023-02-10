@@ -131,5 +131,7 @@ extern ChassisTypeDef chassis;
 extern PIDTypeDef rotate_follow;
 extern float yaw_relative_angle;
 
+extern unsigned char recv_flag;   //虚拟串口接收标志位
+
 
 #endif //HNU_RM_DOWN_CHASSIS_H

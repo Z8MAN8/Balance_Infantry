@@ -21,6 +21,8 @@ int16_t chassis_moto_current[4];
 char spin_flag=0;
 float yaw_relative_angle=0;
 
+unsigned char recv_flag = 0;   //虚拟串口接收标志位
+
 
 void Chassis_Task(void const * argument){
 

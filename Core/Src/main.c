@@ -24,6 +24,7 @@
 #include "spi.h"
 #include "tim.h"
 #include "usart.h"
+#include "usb_device.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -104,6 +105,7 @@ int main(void)
   MX_USART6_UART_Init();
   MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
+    MX_USB_DEVICE_Init();
     DWT_Init(168);
     CAN_Init();
     Remote_Control_init();
