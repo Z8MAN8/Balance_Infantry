@@ -15,12 +15,21 @@ BCPFrameTypeDef upper_rx_data;
 BCPFrameTypeDef upper_tx_data;
 BCPRpyTypeDef rpy_rx_data;
 BCPImuTypeDef imu_tx_data;
+BCPCtrlTypeDef ctrl_tx_data;
+
+extern float chassis_vx;
+extern float chassis_vy;
+extern float chassis_vw;
 
 
 void Transmission_Task(void const * argument){
     int8_t imu_tx_buffer[FRAME_IMU_LEN] = {0} ;
     int32_t imu_data = BMI088.accel[0] * 10000;
     uint32_t *chassis_i = (uint32_t *)&imu_data;
+
+    int8_t ctrl_tx_buffer[FRAME_CTRL_LEN] = {0} ;
+    int32_t velocity_data = chassis.vx * 10000;
+    uint32_t *chassis_v = (uint32_t *)&velocity_data;
 
     uint32_t trans_wake_time = osKernelSysTick();
     while (1){
@@ -61,6 +70,26 @@ void Transmission_Task(void const * argument){
 
         Add_Frame_To_Upper(CHASSIS_IMU, imu_tx_buffer);
         CDC_Transmit_FS((uint8_t*)&imu_tx_data, sizeof(imu_tx_data));
+
+        /* USB发送角/线速度方式控制帧 */
+        velocity_data = chassis_vx * 10000;
+        ctrl_tx_buffer[0] = *chassis_v;
+        ctrl_tx_buffer[1] = *chassis_v >> 8;
+        ctrl_tx_buffer[2] = *chassis_v >> 16;
+        ctrl_tx_buffer[3] = *chassis_v >> 24;
+        velocity_data = chassis_vy * 10000;
+        ctrl_tx_buffer[4] = *chassis_v;
+        ctrl_tx_buffer[5] = *chassis_v >> 8;
+        ctrl_tx_buffer[6] = *chassis_v >> 16;
+        ctrl_tx_buffer[7] = *chassis_v >> 24;
+        velocity_data = chassis_vw * 10000;
+        ctrl_tx_buffer[8] = *chassis_v;
+        ctrl_tx_buffer[9] = *chassis_v >> 8;
+        ctrl_tx_buffer[10] = *chassis_v >> 16;
+        ctrl_tx_buffer[11] = *chassis_v >> 24;
+
+        Add_Frame_To_Upper(CHASSIS_CTRL, ctrl_tx_buffer);
+        CDC_Transmit_FS((uint8_t*)&ctrl_tx_buffer, sizeof(ctrl_tx_buffer));
 
         vTaskDelayUntil(&trans_wake_time,1);
     }
@@ -118,6 +147,19 @@ void Add_Frame_To_Upper(uint16_t send_mode, int8_t* data_buf){
 
             /* 将 odom 帧先转存到中转帧中做数据校验计算 */
             memcpy(&upper_tx_data, &imu_tx_data, sizeof(imu_tx_data));
+            imu_tx_data.SC = (uint8_t)Sumcheck_Cal(upper_tx_data) >> 8;
+            imu_tx_data.AC = (uint8_t)Sumcheck_Cal(upper_tx_data);
+            memset(&upper_tx_data, 0, sizeof(upper_tx_data));
+        }break;
+        case CHASSIS_CTRL:{
+            imu_tx_data.HEAD = 0XFF;
+            imu_tx_data.D_ADDR = MAINFLOD;
+            imu_tx_data.ID = CHASSIS_CTRL;
+            imu_tx_data.LEN = FRAME_CTRL_LEN;
+            memcpy(&ctrl_tx_data.DATA, data_buf, sizeof(ctrl_tx_data.DATA));
+
+            /* 将 odom 帧先转存到中转帧中做数据校验计算 */
+            memcpy(&upper_tx_data, &ctrl_tx_data, sizeof(ctrl_tx_data));
             imu_tx_data.SC = (uint8_t)Sumcheck_Cal(upper_tx_data) >> 8;
             imu_tx_data.AC = (uint8_t)Sumcheck_Cal(upper_tx_data);
             memset(&upper_tx_data, 0, sizeof(upper_tx_data));

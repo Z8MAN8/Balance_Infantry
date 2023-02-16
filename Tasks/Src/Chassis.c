@@ -14,6 +14,10 @@ MotorTypeDef chassis_motor[4];
 PIDTypeDef rotate_follow;
 /* 底盘电机期望转速(rpm) */
 int16_t chassis_moto_speed_ref[4];
+/* 逆运算得到的底盘电机实际速度 */
+float chassis_vx = 0;
+float chassis_vy = 0;
+float chassis_vw = 0;
 /* 底盘电机电流 */
 int16_t chassis_moto_current[4];
 
@@ -33,6 +37,7 @@ void Chassis_Task(void const * argument){
     while (1){
         //根据状态机切换底盘模式
         Chassis_Get_mode();
+        Chassis_Get_speed();
 
         switch (chassis.ctrl_mode) {
             case CHASSIS_FOLLOW_GIMBAL:{
@@ -267,6 +272,26 @@ void Chassis_Calc_moto_speed(float vx, float vy, float vw, int16_t speed[]){
 	}
 #endif
     memcpy(speed, wheel_rpm, 4*sizeof(int16_t));
+}
+
+/* 底盘的运动逆运算求解实际速度 */
+void Chassis_Get_speed(void){
+    static float rotate_ratio_f = ((WHEELBASE+WHEELTRACK)/2.0f - GIMBAL_OFFSET)/RADIAN_COEF;
+    static float rotate_ratio_b = ((WHEELBASE+WHEELTRACK)/2.0f + GIMBAL_OFFSET)/RADIAN_COEF;
+    static float wheel_rpm_ratio = 60.0f/(PERIMETER*CHASSIS_DECELE_RATIO);
+    int16_t wheel_rpm[4];
+
+    for (int i = 0; i < 4; i++)
+    {
+        wheel_rpm[i] = chassis_motor[i].Velocity_RPM;
+    }
+
+    chassis_vw = (wheel_rpm[0] + wheel_rpm[1] + wheel_rpm[2] + wheel_rpm[3])/
+            (2 * wheel_rpm_ratio * (rotate_ratio_b + rotate_ratio_f));
+    chassis_vx =  (wheel_rpm[0] + wheel_rpm[1])/
+            (2 * wheel_rpm_ratio) - chassis_vw * rotate_ratio_f;
+    chassis_vy = (wheel_rpm[1] + wheel_rpm[2])/
+                 (2 * wheel_rpm_ratio) - (chassis_vw * (rotate_ratio_b + rotate_ratio_f))/2;
 }
 
 void Chassis_Calculate_close_loop(void){

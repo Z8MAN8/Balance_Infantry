@@ -107,6 +107,11 @@ void Chassis_Custom_control(void);
 void Chassis_Calc_moto_speed(float vx, float vy, float vw, int16_t speed[]);
 
 /**
+  * @brief     底盘的运动逆运算求解实际速度
+ */
+void Chassis_Get_speed(void);
+
+/**
   * @brief     底盘速度闭环处理计算函数
   */
 void Chassis_Calculate_close_loop(void);
