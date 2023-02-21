@@ -8,6 +8,9 @@
 
 static CAN_TxHeaderTypeDef  tx_message;
 float PowerData [4]__attribute__ ((section(".ccmram")));
+_Bool fric_wheel_run;
+_Bool cap_open_flag;
+uint8_t fric_flag;
 
 
 void CAN_Init(){
@@ -84,12 +87,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
                     yaw_relative_angle=*(float*)&rx_data[0];
 //                yaw_angle_ref=*(float*)&rx_data[4];
                     /*yaw_angle_ref=0;
-                    cap_open_flag=0x1&rx_data[6];
-                    fric_wheel_run=(0x2&rx_data[6])>>1;
-                    fric_flag=(0xC&rx_data[6])>>2;
                     yaw_motor_speed=rx_data[4];
                     yaw_motor_speed=yaw_motor_speed<<8;
                     yaw_motor_speed=yaw_motor_speed|rx_data[5];*/
+                    cap_open_flag=0x1&rx_data[6];
+                    fric_wheel_run=(0x2&rx_data[6])>>1;
+                    fric_flag=(0xC&rx_data[6])>>2;
                 }break;
                 default:break;
             }
