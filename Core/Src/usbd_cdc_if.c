@@ -112,7 +112,7 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-
+uint8_t USB_SEND_OK = 0;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -285,6 +285,16 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
                     recv_flag=0;
                 }
             }break;
+            case CHASSIS_CTRL:{
+                memcpy(&ctrl_rx_data,&upper_rx_data,sizeof(ctrl_rx_data));
+                /*sc = (uint8_t)Sumcheck_Cal(upper_rx_data) >> 8;
+                ac = (uint8_t)Sumcheck_Cal(upper_rx_data);
+                if(upper_rx_data.SC != sc || upper_rx_data.AC != ac)
+                {
+                    memset(&ctrl_rx_data, 0, sizeof(ctrl_rx_data));
+                    recv_flag=0;
+                }*/
+            }break;
             default:{
                 recv_flag=0;
             }break;
@@ -340,6 +350,7 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
   UNUSED(Buf);
   UNUSED(Len);
   UNUSED(epnum);
+  USB_SEND_OK = 1;
   /* USER CODE END 13 */
   return result;
 }

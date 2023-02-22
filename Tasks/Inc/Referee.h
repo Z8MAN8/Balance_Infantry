@@ -14,12 +14,12 @@
 #include "stdint.h"
 #include "UI_print.h"
 #include "keyboard.h"
-extern uint8_t RX_AgreementData_Buffer0[Agreement_RX_BUF_NUM];   //鎺ユ敹瑁佸垽绯荤粺杩斿洖鏁版嵁鐨勬帴鏀剁紦鍐插尯0,璇ョ紦鍐插尯璁剧疆鐨勭浉褰撳瘜锟??
-extern uint8_t RX_AgreementData_Buffer1[Agreement_RX_BUF_NUM];   //鎺ユ敹瑁佸垽绯荤粺杩斿洖鏁版嵁鐨勬帴鏀剁紦鍐插尯1锛岃缂撳啿鍖鸿缃殑鐩稿綋瀵岃
+extern uint8_t RX_AgreementData_Buffer0[Agreement_RX_BUF_NUM];   //接收裁判系统返回数据的接收缓冲区0，该缓冲区设置的相当富裕
+extern uint8_t RX_AgreementData_Buffer1[Agreement_RX_BUF_NUM];   //接收裁判系统返回数据的接收缓冲区1，该缓冲区设置的相当富裕
 extern DMA_HandleTypeDef hdma_usart6_rx;
 extern UART_HandleTypeDef huart6;
-extern Frame_header_Typedef Referee_Data_header;         //瀹炰緥鍖栦竴涓抚澶寸粨鏋勪綋
-extern RX_AgreementData     Referee_Data;                //瀹炰緥鍖栦竴涓暟鎹抚缁撴瀯锟??
+extern Frame_header_Typedef Referee_Data_header;         //实例化一个帧头结构体
+extern RX_AgreementData     Referee_Data;                //实例化一个帧头结构体
 extern fifo_s_t RX_AgreementData_FIFO;
 extern int UI_TCBNum;
 extern UI_TCB* UI_SendTCBSequence[30];

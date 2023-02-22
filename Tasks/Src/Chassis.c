@@ -7,6 +7,11 @@
 #include "motor.h"
 #include "bsp_can.h"
 #include "keyboard.h"
+#include "Transmission.h"
+
+float chassis_vx_test;
+float chassis_vy_test;
+float chassis_vw_test;
 
 ChassisTypeDef chassis;
 MotorTypeDef chassis_motor[4];
@@ -63,6 +68,9 @@ void Chassis_Task(void const * argument){
             case CHASSIS_RELAX:{
                 Chassis_Relax_control();
             }break;
+
+            default:
+                break;
         }
         osDelayUntil(&chassis_wake_time, CHASSIS_PERIOD);
     }
@@ -96,7 +104,7 @@ void Chassis_Get_mode(void){
             if (rc.kb.bit.SHIFT && rc.kb.bit.W){
                 chassis.ctrl_mode = CHASSIS_FLY;
             }
-            if ((rc.sw2 == RC_MI) || rc.mouse.r){
+            if (/*(rc.sw2 == RC_MI) || */rc.mouse.r){
                 chassis.ctrl_mode = CHASSIS_OPEN_LOOP;
             }break;
         case CHASSIS_SPIN:
@@ -180,6 +188,15 @@ void Chassis_Follow_control(void){
         chassis.vw = 0;
     }
     Chassis_Top_handle();
+    if(rc.sw2 == RC_MI && recv_flag){
+        chassis_vx_test = (int32_t) (ctrl_rx_data.DATA[3] << 24 | ctrl_rx_data.DATA[2] << 16
+                                | ctrl_rx_data.DATA[1] << 8 | ctrl_rx_data.DATA[0]);
+        chassis_vy_test = (int32_t) (ctrl_rx_data.DATA[7] << 24 | ctrl_rx_data.DATA[6] << 16
+                                | ctrl_rx_data.DATA[5] << 8 | ctrl_rx_data.DATA[4]);
+        chassis_vw_test = (int32_t) (ctrl_rx_data.DATA[23] << 24 | ctrl_rx_data.DATA[22] << 16
+                                | ctrl_rx_data.DATA[21] << 8 | ctrl_rx_data.DATA[20]) /10000;
+        recv_flag = 0;
+    }
     Chassis_Custom_control();
 }
 

@@ -17,11 +17,13 @@ BCPFrameTypeDef upper_tx_data;
 BCPRpyTypeDef rpy_rx_data;
 BCPImuTypeDef imu_tx_data;
 BCPCtrlTypeDef ctrl_tx_data;
+BCPCtrlTypeDef ctrl_rx_data;
 
 extern float chassis_vx;
 extern float chassis_vy;
 extern float chassis_vw;
 
+extern uint8_t USB_SEND_OK;
 
 void Transmission_Task(void const * argument){
     int8_t imu_tx_buffer[FRAME_IMU_LEN] = {0} ;
@@ -70,6 +72,10 @@ void Transmission_Task(void const * argument){
         imu_tx_buffer[23] = *chassis_i >> 24;
 
         Add_Frame_To_Upper(CHASSIS_IMU, imu_tx_buffer);
+        if(USB_SEND_OK){
+            CDC_Transmit_FS((uint8_t*)&imu_tx_data, sizeof(imu_tx_data));
+            USB_SEND_OK = 0;
+        }
 //        CDC_Transmit_FS((uint8_t*)&imu_tx_data, sizeof(imu_tx_data));
 
         /* USB发送角/线速度方式控制帧 */
@@ -90,11 +96,15 @@ void Transmission_Task(void const * argument){
         ctrl_tx_buffer[11] = *chassis_v >> 24;
 
         Add_Frame_To_Upper(CHASSIS_CTRL, ctrl_tx_buffer);
+        if(USB_SEND_OK){
+            CDC_Transmit_FS((uint8_t*)&ctrl_tx_data, sizeof(ctrl_tx_data));
+            USB_SEND_OK = 0;
+        }
 
         //TODO:研究USB虚拟串口的工作原理
-        memcpy(&upper_tx_all_data[0], &imu_tx_data, sizeof(imu_tx_data));
-        memcpy(&upper_tx_all_data[1], &ctrl_tx_data, sizeof(ctrl_tx_data));
-        CDC_Transmit_FS((uint8_t*)upper_tx_all_data, sizeof(upper_tx_all_data));
+//        memcpy(&upper_tx_all_data[0], &imu_tx_data, sizeof(imu_tx_data));
+//        memcpy(&upper_tx_all_data[1], &ctrl_tx_data, sizeof(ctrl_tx_data));
+//        CDC_Transmit_FS((uint8_t*)upper_tx_all_data, sizeof(upper_tx_all_data));
 
         vTaskDelayUntil(&trans_wake_time,1);
     }

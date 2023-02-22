@@ -111,6 +111,7 @@ extern BCPRpyTypeDef rpy_rx_data;           //接收欧拉角方式控制数据帧
 extern BCPImuTypeDef imu_tx_data;           //发送里程计方式控制数据帧
 
 extern BCPCtrlTypeDef ctrl_tx_data;         //发送角/线速度方式控制数据帧
+extern BCPCtrlTypeDef ctrl_rx_data;         //接收角/线速度方式控制数据帧
 
 
 void Chassis_Send_supercap(void);
