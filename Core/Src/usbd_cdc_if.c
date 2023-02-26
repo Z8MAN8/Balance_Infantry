@@ -112,7 +112,7 @@ uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
-uint8_t USB_SEND_OK = 0;
+uint8_t USB_SEND_OK = 1;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
