@@ -10,10 +10,10 @@
 /* BCP通讯协议相关 */
 //TODO: 考虑不同帧长的情况
 #define FRAME_NUM     10        /* 所有通讯帧的类型总数 */
-#define FRAME_MAX_LEN 36        /* 通讯帧的最大长度 */
+#define FRAME_MAX_LEN 40        /* 通讯帧的最大长度 */
 #define FRAME_RPY_LEN 13        /* 欧拉角rpy方式控制长度 */
 #define FRAME_ODOM_LEN 36       /* 里程计控制方式长度 */
-#define FRAME_IMU_LEN 24        /* imu控制方式长度 */
+#define FRAME_IMU_LEN 40        /* imu控制方式长度 */
 #define FRAME_CTRL_LEN 24       /* 角/线速度控制方式长度 */
 /* 目标地址表 */
 #define BROADCAST   0x00        /* 广播 */
@@ -75,7 +75,7 @@ typedef  struct
 }__attribute__((packed)) BCPRpyTypeDef;
 
 /**
-  * @brief  欧拉角方式控制通讯帧结构体
+  * @brief  imu方式控制通讯帧结构体
   */
 typedef  struct
 {
