@@ -188,13 +188,18 @@ void Chassis_Follow_control(void){
         chassis.vw = 0;
     }
     Chassis_Top_handle();
+
     if(rc.sw2 == RC_MI && recv_flag){
-        chassis_vx_test = (int32_t) (ctrl_rx_data.DATA[3] << 24 | ctrl_rx_data.DATA[2] << 16
+        chassis.vx =  *(int32_t*)&ctrl_rx_data.DATA[0];
+        chassis.vy =  *(int32_t*)&ctrl_rx_data.DATA[4];
+        chassis.vw =  *(int32_t*)&ctrl_rx_data.DATA[20] / 1000;
+
+        /*chassis.vx = (int32_t) (ctrl_rx_data.DATA[3] << 24 | ctrl_rx_data.DATA[2] << 16
                                 | ctrl_rx_data.DATA[1] << 8 | ctrl_rx_data.DATA[0]);
-        chassis_vy_test = (int32_t) (ctrl_rx_data.DATA[7] << 24 | ctrl_rx_data.DATA[6] << 16
+        chassis.vy = (int32_t) (ctrl_rx_data.DATA[7] << 24 | ctrl_rx_data.DATA[6] << 16
                                 | ctrl_rx_data.DATA[5] << 8 | ctrl_rx_data.DATA[4]);
-        chassis_vw_test = (int32_t) (ctrl_rx_data.DATA[23] << 24 | ctrl_rx_data.DATA[22] << 16
-                                | ctrl_rx_data.DATA[21] << 8 | ctrl_rx_data.DATA[20]) /10000;
+        chassis.vw = (int32_t) (ctrl_rx_data.DATA[23] << 24 | ctrl_rx_data.DATA[22] << 16
+                                | ctrl_rx_data.DATA[21] << 8 | ctrl_rx_data.DATA[20]) /1000;*/
         recv_flag = 0;
     }
     Chassis_Custom_control();
