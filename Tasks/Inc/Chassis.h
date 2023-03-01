@@ -137,6 +137,10 @@ extern ChassisTypeDef chassis;
 extern PIDTypeDef rotate_follow;
 extern float yaw_relative_angle;
 
+extern float chassis_total_x;
+extern float chassis_total_y;
+extern float chassis_total_w;
+
 extern unsigned char recv_flag;   //虚拟串口接收标志位
 
 

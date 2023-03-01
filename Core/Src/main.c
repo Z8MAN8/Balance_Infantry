@@ -112,7 +112,8 @@ int main(void)
     Remote_Control_init();
     BMI088_init(&hspi1);
     HAL_TIM_Base_Start_IT(&htim2);
-  /* USER CODE END 2 */
+    HAL_TIM_PWM_Start(&htim10,TIM_CHANNEL_1);
+    /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
