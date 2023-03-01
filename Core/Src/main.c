@@ -104,12 +104,14 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USART6_UART_Init();
   MX_TIM10_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
     MX_USB_DEVICE_Init();
     DWT_Init(168);
     CAN_Init();
     Remote_Control_init();
     BMI088_init(&hspi1);
+    HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */

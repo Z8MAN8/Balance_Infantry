@@ -32,13 +32,19 @@ void Transmission_Task(void const * argument){
     uint32_t *chassis_i = (uint32_t *)&imu_data;
 
     int8_t ctrl_tx_buffer[FRAME_CTRL_LEN] = {0} ;
-    int32_t velocity_data = chassis.vx * 10000;
+    int32_t velocity_data = chassis_vx * 10000;
     uint32_t *chassis_v = (uint32_t *)&velocity_data;
+
+    int8_t test_buffer[1] = {0} ;
 
     uint32_t trans_wake_time = osKernelSysTick();
     while (1){
         Chassis_Send_supercap();
         Chassis_Send_shoot();
+
+        if(!USB_CONNECT_OK){
+            CDC_Transmit_FS(test_buffer,sizeof(test_buffer));
+        }  /*一直发送测试USB连接，防止不进发送回调*/
 
         /* USB发送imu帧 */
         imu_data = ins.q[0] * 10000;
@@ -93,33 +99,31 @@ void Transmission_Task(void const * argument){
         imu_tx_buffer[39] = *chassis_i >> 24;
 
         Add_Frame_To_Upper(CHASSIS_IMU, imu_tx_buffer);
-        if(USB_SEND_OK){
+        if((USB_SEND_OK % 2) == 1){
             CDC_Transmit_FS((uint8_t*)&imu_tx_data, sizeof(imu_tx_data));
-            USB_SEND_OK = 0;
         }
 //        CDC_Transmit_FS((uint8_t*)&imu_tx_data, sizeof(imu_tx_data));
 
         /* USB发送角/线速度方式控制帧 */
-        velocity_data = chassis_vx * 10000;
+        velocity_data = chassis_vx * 10;
         ctrl_tx_buffer[0] = *chassis_v;
         ctrl_tx_buffer[1] = *chassis_v >> 8;
         ctrl_tx_buffer[2] = *chassis_v >> 16;
         ctrl_tx_buffer[3] = *chassis_v >> 24;
-        velocity_data = chassis_vy * 10000;
+        velocity_data = chassis_vy * 10;
         ctrl_tx_buffer[4] = *chassis_v;
         ctrl_tx_buffer[5] = *chassis_v >> 8;
         ctrl_tx_buffer[6] = *chassis_v >> 16;
         ctrl_tx_buffer[7] = *chassis_v >> 24;
-        velocity_data = chassis_vw * 10000;
+        velocity_data = chassis_vw * 10;
         ctrl_tx_buffer[8] = *chassis_v;
         ctrl_tx_buffer[9] = *chassis_v >> 8;
         ctrl_tx_buffer[10] = *chassis_v >> 16;
         ctrl_tx_buffer[11] = *chassis_v >> 24;
 
         Add_Frame_To_Upper(CHASSIS_CTRL, ctrl_tx_buffer);
-        if(USB_SEND_OK){
+        if((USB_SEND_OK % 2) == 0){
             CDC_Transmit_FS((uint8_t*)&ctrl_tx_data, sizeof(ctrl_tx_data));
-            USB_SEND_OK = 0;
         }
 
         //TODO:研究USB虚拟串口的工作原理

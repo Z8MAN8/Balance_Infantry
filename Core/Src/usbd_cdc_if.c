@@ -113,6 +113,7 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
 uint8_t USB_SEND_OK = 1;
+uint8_t USB_CONNECT_OK = 0;
 /* USER CODE END EXPORTED_VARIABLES */
 
 /**
@@ -350,7 +351,8 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
   UNUSED(Buf);
   UNUSED(Len);
   UNUSED(epnum);
-  USB_SEND_OK = 1;
+  USB_CONNECT_OK = 1;
+  USB_SEND_OK++;
   /* USER CODE END 13 */
   return result;
 }

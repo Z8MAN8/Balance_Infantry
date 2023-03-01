@@ -2,6 +2,7 @@
 // Created by 14685 on 2022/7/16.
 //
 
+#include <tim.h>
 #include "Chassis.h"
 #include "bsp_uart.h"
 #include "motor.h"
@@ -29,6 +30,10 @@ int16_t chassis_moto_current[4];
 //底盘陀螺转速系数
 char spin_flag=0;
 float yaw_relative_angle=0;
+
+float chassis_total_x;
+float chassis_total_y;
+float chassis_total_w;
 
 unsigned char recv_flag = 0;   //虚拟串口接收标志位
 
@@ -178,7 +183,8 @@ void Chassis_Open_control(void){
 
 void Chassis_Follow_control(void){
     Chassis_Get_control_information();
-    chassis.vw = PID_Calculate(&rotate_follow, yaw_relative_angle,0);
+    chassis.vw =  *(int32_t*)&ctrl_rx_data.DATA[20] / 10000.0 * 180/PI;
+    /*chassis.vw = PID_Calculate(&rotate_follow, yaw_relative_angle,0);
     if ((abs(rc.ch1) <= 10)
         && (abs(rc.ch2) <= 10)
         && (abs(rc.ch3) <= 10)
@@ -187,21 +193,7 @@ void Chassis_Follow_control(void){
         && (abs(rc.mouse.y) <= 1)){
         chassis.vw = 0;
     }
-    Chassis_Top_handle();
-
-    if(rc.sw2 == RC_MI && recv_flag){
-        chassis.vx =  *(int32_t*)&ctrl_rx_data.DATA[0];
-        chassis.vy =  *(int32_t*)&ctrl_rx_data.DATA[4];
-        chassis.vw =  *(int32_t*)&ctrl_rx_data.DATA[20] / 1000;
-
-        /*chassis.vx = (int32_t) (ctrl_rx_data.DATA[3] << 24 | ctrl_rx_data.DATA[2] << 16
-                                | ctrl_rx_data.DATA[1] << 8 | ctrl_rx_data.DATA[0]);
-        chassis.vy = (int32_t) (ctrl_rx_data.DATA[7] << 24 | ctrl_rx_data.DATA[6] << 16
-                                | ctrl_rx_data.DATA[5] << 8 | ctrl_rx_data.DATA[4]);
-        chassis.vw = (int32_t) (ctrl_rx_data.DATA[23] << 24 | ctrl_rx_data.DATA[22] << 16
-                                | ctrl_rx_data.DATA[21] << 8 | ctrl_rx_data.DATA[20]) /1000;*/
-        recv_flag = 0;
-    }
+    Chassis_Top_handle();*/
     Chassis_Custom_control();
 }
 
@@ -237,6 +229,19 @@ void Chassis_Get_control_information(void){
     chassis.vx = rc.ch1 * CHASSIS_RC_MOVE_RATIO_X / RC_MAX_VALUE * MAX_CHASSIS_VX_SPEED + km.vx * CHASSIS_PC_MOVE_RATIO_X;
     chassis.vy = rc.ch2 * CHASSIS_RC_MOVE_RATIO_Y / RC_MAX_VALUE * MAX_CHASSIS_VY_SPEED + km.vy * CHASSIS_PC_MOVE_RATIO_Y;
     chassis.vw = rc.ch3 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED + rc.mouse.x * CHASSIS_PC_MOVE_RATIO_R;
+    if(rc.sw2 == RC_MI /*&& recv_flag*/){
+        chassis.vy =  *(int32_t*)&ctrl_rx_data.DATA[0] / 10;
+        chassis.vx =  *(int32_t*)&ctrl_rx_data.DATA[4] / 10;
+        /*chassis.vw =  (*(int32_t*)&ctrl_rx_data.DATA[20] / 10000)*180/PI;*/
+
+        /*chassis.vx = (int32_t) (ctrl_rx_data.DATA[3] << 24 | ctrl_rx_data.DATA[2] << 16
+                                | ctrl_rx_data.DATA[1] << 8 | ctrl_rx_data.DATA[0]);
+        chassis.vy = (int32_t) (ctrl_rx_data.DATA[7] << 24 | ctrl_rx_data.DATA[6] << 16
+                                | ctrl_rx_data.DATA[5] << 8 | ctrl_rx_data.DATA[4]);
+        chassis.vw = (int32_t) (ctrl_rx_data.DATA[23] << 24 | ctrl_rx_data.DATA[22] << 16
+                                | ctrl_rx_data.DATA[21] << 8 | ctrl_rx_data.DATA[20]) /1000;*/
+        recv_flag = 0;
+    }
 }
 
 
@@ -331,4 +336,16 @@ void Chassis_Top_handle(void){
     float temp_y=-b*chassis.vx+a*chassis.vy;
     chassis.vx=temp_x;
     chassis.vy=temp_y;
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim == (&htim2))
+    {
+        /* unit: mm */
+        chassis_total_x += chassis_vx / 1000;
+        chassis_total_y += chassis_vy / 1000;
+        /* unit: rad */
+        chassis_total_w += chassis_vw / 1000;
+    }
 }
