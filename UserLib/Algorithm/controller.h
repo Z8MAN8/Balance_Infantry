@@ -194,6 +194,8 @@ void PID_Init(
         uint8_t improve);
 float PID_Calculate(PIDTypeDef *pid, float measure, float ref);
 
+float PID_Inc_Calc(PIDTypeDef *pid, float measure, float ref);
+
 /*************************** FEEDFORWARD CONTROL *****************************/
 typedef  struct
 {

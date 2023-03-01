@@ -182,8 +182,12 @@ void Chassis_Open_control(void){
 }
 
 void Chassis_Follow_control(void){
+    if(rc.sw2 == RC_UP){
+        memset(&ctrl_rx_data, 0, sizeof(ctrl_rx_data));;
+    }
     Chassis_Get_control_information();
-    chassis.vw =  *(int32_t*)&ctrl_rx_data.DATA[20] / 10000.0 * 180/PI;
+    chassis.vw =  -*(int32_t*)&ctrl_rx_data.DATA[20] / 10000.0 * 180/PI
+            + rc.ch3 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED;
     /*chassis.vw = PID_Calculate(&rotate_follow, yaw_relative_angle,0);
     if ((abs(rc.ch1) <= 10)
         && (abs(rc.ch2) <= 10)

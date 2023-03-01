@@ -105,6 +105,7 @@ int main(void)
   MX_USART6_UART_Init();
   MX_TIM10_Init();
   MX_TIM2_Init();
+  MX_TIM8_Init();
   /* USER CODE BEGIN 2 */
     MX_USB_DEVICE_Init();
     DWT_Init(168);
@@ -113,7 +114,8 @@ int main(void)
     BMI088_init(&hspi1);
     HAL_TIM_Base_Start_IT(&htim2);
     HAL_TIM_PWM_Start(&htim10,TIM_CHANNEL_1);
-    /* USER CODE END 2 */
+    HAL_TIM_PWM_Start(&htim8,TIM_CHANNEL_1);
+  /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();

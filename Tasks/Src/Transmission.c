@@ -106,12 +106,12 @@ void Transmission_Task(void const * argument){
 //        CDC_Transmit_FS((uint8_t*)&imu_tx_data, sizeof(imu_tx_data));
 
         /* USB发送角/线速度方式控制帧 */
-        odom_data = chassis_vx * 10;
+        odom_data = chassis_vy * 10;
         odom_tx_buffer[0] = *chassis_o;
         odom_tx_buffer[1] = *chassis_o >> 8;
         odom_tx_buffer[2] = *chassis_o >> 16;
         odom_tx_buffer[3] = *chassis_o >> 24;
-        odom_data = chassis_vy * 10;
+        odom_data = chassis_vx * 10;
         odom_tx_buffer[4] = *chassis_o;
         odom_tx_buffer[5] = *chassis_o >> 8;
         odom_tx_buffer[6] = *chassis_o >> 16;
@@ -121,17 +121,17 @@ void Transmission_Task(void const * argument){
         odom_tx_buffer[9] = *chassis_o >> 8;
         odom_tx_buffer[10] = *chassis_o >> 16;
         odom_tx_buffer[11] = *chassis_o >> 24;
-        odom_data = chassis_total_x * 10;
+        odom_data = chassis_total_y * 10;
         odom_tx_buffer[12] = *chassis_o;
         odom_tx_buffer[13] = *chassis_o >> 8;
         odom_tx_buffer[14] = *chassis_o >> 16;
         odom_tx_buffer[15] = *chassis_o >> 24;
-        odom_data = chassis_total_y * 10;
+        odom_data = chassis_total_x * 10;
         odom_tx_buffer[16] = *chassis_o;
         odom_tx_buffer[17] = *chassis_o >> 8;
         odom_tx_buffer[18] = *chassis_o >> 16;
         odom_tx_buffer[19] = *chassis_o >> 24;
-        odom_data = chassis_total_w * 10000;
+        odom_data = -chassis_total_w * 10000;
         odom_tx_buffer[20] = *chassis_o;
         odom_tx_buffer[21] = *chassis_o >> 8;
         odom_tx_buffer[22] = *chassis_o >> 16;
@@ -221,10 +221,10 @@ void Add_Frame_To_Upper(uint16_t send_mode, int8_t* data_buf){
             memset(&upper_tx_data, 0, sizeof(upper_tx_data));
         }break;
         case CHASSIS_ODOM:{
-            ctrl_tx_data.HEAD = 0XFF;
-            ctrl_tx_data.D_ADDR = MAINFLOD;
-            ctrl_tx_data.ID = CHASSIS_ODOM;
-            ctrl_tx_data.LEN = FRAME_ODOM_LEN;
+            odom_tx_data.HEAD = 0XFF;
+            odom_tx_data.D_ADDR = MAINFLOD;
+            odom_tx_data.ID = CHASSIS_ODOM;
+            odom_tx_data.LEN = FRAME_ODOM_LEN;
             memcpy(&odom_tx_data.DATA, data_buf, sizeof(odom_tx_data.DATA));
 
             /* 将 odom 帧先转存到中转帧中做数据校验计算 */

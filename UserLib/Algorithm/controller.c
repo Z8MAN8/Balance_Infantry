@@ -274,6 +274,32 @@ float PID_Calculate(PIDTypeDef *pid, float measure, float ref)
     return pid->Output;
 }
 
+/**
+  * @brief     PID 计算函数，使用增量式 PID 计算  先调i，再调p
+  * @param[in] pid: PID 结构体
+  * @param[in] get: 反馈数据
+  * @param[in] set: 目标数据
+  * @retval    PID 计算输出
+  */
+float PID_Inc_Calc(PIDTypeDef *pid, float measure, float ref)
+{
+    pid->Measure = measure;
+    pid->Ref = ref;
+    pid->Err = ref - measure;
+
+    pid->Pout = pid->Kp * (pid->Err - pid->Last_Err);
+    pid->Iout = pid->Ki * pid->Err;
+//    pid->dout = pid->d * (pid->err[NOW] - pid->err[LAST]);
+
+    abs_limit(pid->Iout, pid->IntegralLimit);
+    pid->Output += pid->Pout + pid->Iout /*+ pid->dout*/;
+    abs_limit(pid->Output, pid->MaxOut);
+
+    pid->Last_Err  = pid->Err;
+
+    return pid->Output;
+}
+
 static void f_Trapezoid_Intergral(PIDTypeDef *pid)
 {
     if (pid->FuzzyRule == NULL)
