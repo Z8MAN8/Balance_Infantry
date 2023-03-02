@@ -54,7 +54,7 @@ void Ins_Task(void const * argument)
 
     IMU_QuaternionEKF_Init(10, 0.001, 1000000 * 10, 0.9996 * 0 + 1, 0);
     // imu heat init
-    PID_Init(&TempCtrl, 1100, 10, 0, 210, 2, 0, 0, 0, 0, 0, 0, 0);
+    PID_Init(&TempCtrl, 1100, 10, 0, 210, 4, 0, 0, 0, 0, 0, 0, 0);
     HAL_TIM_PWM_Start(&htim10, TIM_CHANNEL_1);
     uint32_t ins_wake_time = osKernelSysTick();
     /* Infinite loop */
@@ -121,8 +121,8 @@ void Ins_Task(void const * argument)
         }
 
         // temperature control
-//        if ((count % 2) == 0)
-//        {
+        if ((count % 2) == 0)
+        {
             // 500hz
             IMU_Temperature_Ctrl();
 //            HAL_UART_Transmit(&huart1,(uint8_t *)&Testdata,sizeof(Testdata),0xFFFFFFFFU);
@@ -130,12 +130,11 @@ void Ins_Task(void const * argument)
 //            if (GlobalDebugMode == IMU_HEAT_DEBUG)
 //                Serial_Debug(&huart1, 1, RefTemp, BMI088.temperature, TempCtrl.Output / 1000.0f, TempCtrl.Pout / 1000.0f, TempCtrl.Iout / 1000.0f, TempCtrl.Dout / 1000.0f);
 //
-//        }
-         __HAL_TIM_SetCompare(&htim8, TIM_CHANNEL_1, 1998);
+        }
 
-        /*if ((count % 100) == 0)
+        if ((count % 100) == 0)
         {
-        }*/
+        }
 
         count++;
 //        HAL_GPIO_WritePin(GPIOE, task1_Pin, GPIO_PIN_RESET);
@@ -329,7 +328,7 @@ void IMU_Temperature_Ctrl(void)
 {
     static uint32_t value = 0;
     value = PID_Calculate(&TempCtrl, BMI088.temperature, target_temp );
-    __HAL_TIM_SetCompare(&htim10, TIM_CHANNEL_1, value);
+    TIM_Set_PWM(&htim10, TIM_CHANNEL_1, value);
 }
 
 void IMU_Get_data(ImuTypeDef *imu_data){

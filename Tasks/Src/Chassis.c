@@ -317,12 +317,13 @@ void Chassis_Get_speed(void){
         wheel_rpm[i] = chassis_motor[i].Velocity_RPM;
     }
 
-    chassis_vw = (wheel_rpm[0] + wheel_rpm[1] + wheel_rpm[2] + wheel_rpm[3])/
-            (2 * wheel_rpm_ratio * (rotate_ratio_b + rotate_ratio_f));
-    chassis_vx =  (wheel_rpm[0] + wheel_rpm[1])/
-            (2 * wheel_rpm_ratio) - chassis_vw * rotate_ratio_f;
-    chassis_vy = (wheel_rpm[1] + wheel_rpm[2])/
-                 (2 * wheel_rpm_ratio) - (chassis_vw * (rotate_ratio_b + rotate_ratio_f))/2;
+    chassis_vw = -(wheel_rpm[0] + wheel_rpm[1] + wheel_rpm[2] + wheel_rpm[3])/
+            (2 * wheel_rpm_ratio * (rotate_ratio_b + rotate_ratio_f)); //取反
+    chassis_vy =  - (wheel_rpm[0] + wheel_rpm[1])/
+            (2 * wheel_rpm_ratio) - chassis_vw * rotate_ratio_f; //取反
+    chassis_vx = (wheel_rpm[1] + wheel_rpm[2])/
+                 (2 * wheel_rpm_ratio) - (-chassis_vw * (rotate_ratio_b + rotate_ratio_f))/2;
+
 }
 
 void Chassis_Calculate_close_loop(void){
@@ -346,10 +347,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
     if (htim == (&htim2))
     {
+        /* unit: degree */
+        chassis_total_w += (chassis_vw / 1000) / 180 * PI;
         /* unit: mm */
-        chassis_total_x += chassis_vx / 1000;
-        chassis_total_y += chassis_vy / 1000;
-        /* unit: rad */
-        chassis_total_w += chassis_vw / 1000;
+        chassis_total_x += (chassis_vx * arm_cos_f32(chassis_total_w)
+                - chassis_vy * arm_sin_f32(chassis_total_w)) / 1000;
+        chassis_total_y += (chassis_vx * arm_sin_f32(chassis_total_w)
+                + chassis_vy * arm_cos_f32(chassis_total_w)) / 1000;
     }
 }

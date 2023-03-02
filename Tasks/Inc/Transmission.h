@@ -13,7 +13,7 @@
 #define FRAME_MAX_LEN   40      /* 通讯帧的最大长度 */
 #define FRAME_RPY_LEN   13      /* 欧拉角rpy方式控制长度 */
 #define FRAME_ODOM_LEN  24      /* 里程计控制方式长度 */
-#define FRAME_IMU_LEN   40      /* imu控制方式长度 */
+#define FRAME_IMU_LEN   36      /* imu控制方式长度 */
 #define FRAME_CTRL_LEN  24      /* 角/线速度控制方式长度 */
 /* 目标地址表 */
 #define BROADCAST   0x00        /* 广播 */

@@ -48,56 +48,51 @@ void Transmission_Task(void const * argument){
         }  /*一直发送测试USB连接，防止不进发送回调*/
 
         /* USB发送imu帧 */
-        imu_data = ins.q[0] * 10000;
+        imu_data = ins.yaw * 10000;
         imu_tx_buffer[0] = *chassis_i;
         imu_tx_buffer[1] = *chassis_i >> 8;
         imu_tx_buffer[2] = *chassis_i >> 16;
         imu_tx_buffer[3] = *chassis_i >> 24;
-        imu_data = ins.q[1] * 10000;
+        imu_data = ins.pitch * 10000;
         imu_tx_buffer[4] = *chassis_i;
         imu_tx_buffer[5] = *chassis_i >> 8;
         imu_tx_buffer[6] = *chassis_i >> 16;
         imu_tx_buffer[7] = *chassis_i >> 24;
-        imu_data = ins.q[2] * 10000;
+        imu_data = ins.roll * 10000;
         imu_tx_buffer[8] = *chassis_i;
         imu_tx_buffer[9] = *chassis_i >> 8;
         imu_tx_buffer[10] = *chassis_i >> 16;
         imu_tx_buffer[11] = *chassis_i >> 24;
-        imu_data = ins.q[3] * 10000;
+        imu_data = BMI088.gyro[0] * 10000;
         imu_tx_buffer[12] = *chassis_i;
         imu_tx_buffer[13] = *chassis_i >> 8;
         imu_tx_buffer[14] = *chassis_i >> 16;
         imu_tx_buffer[15] = *chassis_i >> 24;
-        imu_data = BMI088.gyro[0] * 10000;
+        imu_data = BMI088.gyro[1] * 10000;
         imu_tx_buffer[16] = *chassis_i;
         imu_tx_buffer[17] = *chassis_i >> 8;
         imu_tx_buffer[18] = *chassis_i >> 16;
         imu_tx_buffer[19] = *chassis_i >> 24;
-        imu_data = BMI088.gyro[1] * 10000;
+        imu_data = BMI088.gyro[2] * 10000;
         imu_tx_buffer[20] = *chassis_i;
         imu_tx_buffer[21] = *chassis_i >> 8;
         imu_tx_buffer[22] = *chassis_i >> 16;
         imu_tx_buffer[23] = *chassis_i >> 24;
-        imu_data = BMI088.gyro[2] * 10000;
+        imu_data = BMI088.accel[0] * 10000;
         imu_tx_buffer[24] = *chassis_i;
         imu_tx_buffer[25] = *chassis_i >> 8;
         imu_tx_buffer[26] = *chassis_i >> 16;
         imu_tx_buffer[27] = *chassis_i >> 24;
-        imu_data = BMI088.accel[0] * 10000;
+        imu_data = BMI088.accel[1] * 10000;
         imu_tx_buffer[28] = *chassis_i;
         imu_tx_buffer[29] = *chassis_i >> 8;
         imu_tx_buffer[30] = *chassis_i >> 16;
         imu_tx_buffer[31] = *chassis_i >> 24;
-        imu_data = BMI088.accel[1] * 10000;
+        imu_data = BMI088.accel[2] * 10000;
         imu_tx_buffer[32] = *chassis_i;
         imu_tx_buffer[33] = *chassis_i >> 8;
         imu_tx_buffer[34] = *chassis_i >> 16;
         imu_tx_buffer[35] = *chassis_i >> 24;
-        imu_data = BMI088.accel[2] * 10000;
-        imu_tx_buffer[36] = *chassis_i;
-        imu_tx_buffer[37] = *chassis_i >> 8;
-        imu_tx_buffer[38] = *chassis_i >> 16;
-        imu_tx_buffer[39] = *chassis_i >> 24;
 
         Add_Frame_To_Upper(CHASSIS_IMU, imu_tx_buffer);
         if((USB_SEND_OK % 2) == 1){
@@ -106,12 +101,12 @@ void Transmission_Task(void const * argument){
 //        CDC_Transmit_FS((uint8_t*)&imu_tx_data, sizeof(imu_tx_data));
 
         /* USB发送角/线速度方式控制帧 */
-        odom_data = chassis_vy * 10;
+        odom_data = chassis_vx * 10;          /*对应上位机中的x轴*/
         odom_tx_buffer[0] = *chassis_o;
         odom_tx_buffer[1] = *chassis_o >> 8;
         odom_tx_buffer[2] = *chassis_o >> 16;
         odom_tx_buffer[3] = *chassis_o >> 24;
-        odom_data = chassis_vx * 10;
+        odom_data = chassis_vy * 10;         /*对应上位机中的y轴（取反）*/
         odom_tx_buffer[4] = *chassis_o;
         odom_tx_buffer[5] = *chassis_o >> 8;
         odom_tx_buffer[6] = *chassis_o >> 16;
@@ -121,17 +116,17 @@ void Transmission_Task(void const * argument){
         odom_tx_buffer[9] = *chassis_o >> 8;
         odom_tx_buffer[10] = *chassis_o >> 16;
         odom_tx_buffer[11] = *chassis_o >> 24;
-        odom_data = chassis_total_y * 10;
+        odom_data = chassis_total_x * 10;      /*对应上位机中的x轴*/
         odom_tx_buffer[12] = *chassis_o;
         odom_tx_buffer[13] = *chassis_o >> 8;
         odom_tx_buffer[14] = *chassis_o >> 16;
         odom_tx_buffer[15] = *chassis_o >> 24;
-        odom_data = chassis_total_x * 10;
+        odom_data = chassis_total_y * 10;     /*对应上位机中的y轴*/
         odom_tx_buffer[16] = *chassis_o;
         odom_tx_buffer[17] = *chassis_o >> 8;
         odom_tx_buffer[18] = *chassis_o >> 16;
         odom_tx_buffer[19] = *chassis_o >> 24;
-        odom_data = -chassis_total_w * 10000;
+        odom_data = chassis_total_w * 10000;
         odom_tx_buffer[20] = *chassis_o;
         odom_tx_buffer[21] = *chassis_o >> 8;
         odom_tx_buffer[22] = *chassis_o >> 16;
