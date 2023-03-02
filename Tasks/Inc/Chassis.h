@@ -40,8 +40,8 @@ typedef struct
     ChassisModeType  last_mode;  //上次底盘控制模式
 
     /* 底盘移动速度相关数据 */
-    float           vx;         //底盘前后速度
-    float           vy;         //底盘左右速度
+    float           vx;         //底盘左右速度
+    float           vy;         //底盘前后速度
     float           vw;         //底盘旋转速度
 
 
