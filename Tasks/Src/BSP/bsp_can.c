@@ -94,6 +94,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
                     fric_wheel_run=(0x2&rx_data[6])>>1;
                     fric_flag=(0xC&rx_data[6])>>2;
                 }break;
+
+                // 云台状态数据
+                case CAN_GIM_STATE: {
+                    // 8位拼接成32位int
+                    gim_ctrl_mode = (rx_data[0]<<24)|(rx_data[1]<<16)|(rx_data[2]<<8)|rx_data[3];
+                }
                 default:break;
             }
         }

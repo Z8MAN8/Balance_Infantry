@@ -35,6 +35,9 @@ float chassis_total_x;
 float chassis_total_y;
 float chassis_total_w;
 
+// 云台控制模式
+GimbalModeType gim_ctrl_mode;
+
 unsigned char recv_flag = 0;   //虚拟串口接收标志位
 
 
@@ -100,6 +103,11 @@ void Chassis_Init_param(void)
 
 void Chassis_Get_mode(void){
     chassis.last_mode = chassis.ctrl_mode;
+
+    /* 云台失能，底盘也得跟着失能 */
+    if (gim_ctrl_mode == GIMBAL_RELAX) {
+        chassis.ctrl_mode = CHASSIS_RELAX;
+    }
 
     switch (chassis.ctrl_mode) {
         case CHASSIS_FOLLOW_GIMBAL:

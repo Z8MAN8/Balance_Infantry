@@ -14,6 +14,8 @@
 #define CAN_ODOM_TX_TWO     0x142   /* odom数据帧第二帧 */
 #define CAN_ODOM_TX_THREE   0x143   /* odom数据帧第二帧 */
 
+#define CAN_GIM_STATE         0x145   /* 底盘状态数据 */
+
 /**
  * @brief  CAN消息的ID
  */
@@ -59,6 +61,18 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
  */
 void PowerDataResolve(uint8_t data[]);
 
+/* 云台状态传输相关 */
+/**
+  * @brief     云台控制模式枚举
+  */
+typedef enum
+{
+    GIMBAL_INIT = 0,         //云台初始化
+    GIMBAL_RELAX = 1,            //云台断电
+    GIMBAL_CLOSE_LOOP_ZGYRO = 2, //云台跟随imu z轴角度
+    GIMBAL_AUTO	= 3						 //云台自瞄模式
+} GimbalModeType;
 
+extern GimbalModeType gim_ctrl_mode;
 extern float PowerData[4];
 #endif //HNU_RM_DOWN_BSP_CAN_H
