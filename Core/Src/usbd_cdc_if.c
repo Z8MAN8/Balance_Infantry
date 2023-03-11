@@ -286,6 +286,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
                     recv_flag=0;
                 }
             }break;
+
             case CHASSIS_CTRL:{
                 memcpy(&ctrl_rx_data,&upper_rx_data,sizeof(ctrl_rx_data));
                 /*sc = (uint8_t)Sumcheck_Cal(upper_rx_data) >> 8;
