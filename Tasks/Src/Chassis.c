@@ -317,12 +317,12 @@ void Chassis_Get_speed(void){
         wheel_rpm[i] = chassis_motor[i].Velocity_RPM;
     }
 
-    chassis_vw = -(wheel_rpm[1] + wheel_rpm[3])/
-            (wheel_rpm_ratio * (rotate_ratio_b + rotate_ratio_f)); //取反
+    chassis_vw = -(wheel_rpm[0] + wheel_rpm[1] + wheel_rpm[2] + wheel_rpm[3])/
+            (2 * wheel_rpm_ratio * (rotate_ratio_b + rotate_ratio_f)); //取反
     chassis_vy =  - (wheel_rpm[0] + wheel_rpm[1])/
             (2 * wheel_rpm_ratio) - chassis_vw * rotate_ratio_f; //取反
-    chassis_vx = (wheel_rpm[1] + wheel_rpm[2])/
-                 (2 * wheel_rpm_ratio) - (-chassis_vw * (rotate_ratio_b + rotate_ratio_f))/2;
+    chassis_vx = (-wheel_rpm[1] + wheel_rpm[1] + wheel_rpm[2]-wheel_rpm[3])/
+                 (2 * wheel_rpm_ratio);
 
 }
 
