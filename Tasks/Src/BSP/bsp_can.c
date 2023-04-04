@@ -98,7 +98,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
                 // 云台状态数据
                 case CAN_GIM_STATE: {
                     // 8位拼接成32位int
-                    gim_ctrl_mode = (rx_data[0]<<24)|(rx_data[1]<<16)|(rx_data[2]<<8)|rx_data[3];
+                    gim_ctrl_mode = rx_data[0];
                 }
                 default:break;
             }

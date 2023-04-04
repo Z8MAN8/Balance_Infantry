@@ -29,6 +29,7 @@ int16_t chassis_moto_current[4];
 
 //底盘陀螺转速系数
 char spin_flag=0;
+uint8_t spin_conver_flag = 0;
 float yaw_relative_angle=0;
 
 float chassis_total_x;
@@ -114,15 +115,17 @@ void Chassis_Get_mode(void){
             if (rc.kb.bit.E){
                 chassis.ctrl_mode = CHASSIS_SPIN;
             }
-            if (rc.kb.bit.SHIFT && rc.kb.bit.W){
+            //TODO:步兵对抗赛去除飞坡
+            /*if (rc.kb.bit.SHIFT && rc.kb.bit.W){
                 chassis.ctrl_mode = CHASSIS_FLY;
-            }
-            if (/*(rc.sw2 == RC_MI) || */rc.mouse.r){
+            }*/
+            /*if (*//*(rc.sw2 == RC_MI) || *//*rc.mouse.r){
                 chassis.ctrl_mode = CHASSIS_OPEN_LOOP;
-            }break;
+            }break;*/
         case CHASSIS_SPIN:
-            if (spin_flag==0){
+            if (spin_conver_flag==1){
                 chassis.ctrl_mode = CHASSIS_FOLLOW_GIMBAL;
+                spin_conver_flag = 0;
             }break;
         case CHASSIS_FLY:
             if ((rc.kb.bit.SHIFT & rc.kb.bit.W) != 1){
@@ -185,7 +188,8 @@ void Chassis_Fly_control(void){
 
 void Chassis_Open_control(void){
     Chassis_Get_control_information();
-    chassis.vw = 0;  //TODO
+    chassis.vw = 0;
+    Chassis_Top_handle();//TODO:以云台的视角为正方向
     Chassis_Custom_control();
 }
 
@@ -194,10 +198,17 @@ void Chassis_Follow_control(void){
         memset(&ctrl_rx_data, 0, sizeof(ctrl_rx_data));;
     }
     Chassis_Get_control_information();
-    chassis.vw =  -*(int32_t*)&ctrl_rx_data.DATA[20] / 10000.0 * 180/PI
-            + rc.ch3 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED;
-    /*chassis.vw = PID_Calculate(&rotate_follow, yaw_relative_angle,0);
-    if ((abs(rc.ch1) <= 10)
+    /*chassis.vw =  -*(int32_t*)&ctrl_rx_data.DATA[20] / 10000.0 * 180/PI
+            + rc.ch3 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED;*/
+
+    if(gim_ctrl_mode == GIMBAL_CLOSE_LOOP_ZGYRO || gim_ctrl_mode == GIMBAL_AUTO){
+        chassis.vw = PID_Calculate(&rotate_follow, yaw_relative_angle,0);
+    }
+    else{
+        chassis.vw = 0;
+    }
+
+    /*if ((abs(rc.ch1) <= 10)
         && (abs(rc.ch2) <= 10)
         && (abs(rc.ch3) <= 10)
         && (abs(rc.ch4) <= 10)
@@ -212,10 +223,13 @@ void Chassis_Follow_control(void){
 void Chassis_Spin_control(void){
     Chassis_Get_control_information();
     if(rc.kb.bit.E)
-    spin_flag++;
-    if(rc.kb.bit.E && rc.kb.bit.SHIFT)
+        spin_flag++;
+    if(rc.kb.bit.E && rc.kb.bit.SHIFT){
         spin_flag=0;
-    chassis.vw=10*spin_flag;   //陀螺旋转速度
+        spin_conver_flag = 1;
+    }
+
+    chassis.vw=2*spin_flag;   //陀螺旋转速度
     Chassis_Top_handle();
     Chassis_Custom_control();
 }
@@ -241,19 +255,13 @@ void Chassis_Get_control_information(void){
     chassis.vx = rc.ch1 * CHASSIS_RC_MOVE_RATIO_X / RC_MAX_VALUE * MAX_CHASSIS_VX_SPEED + km.vx * CHASSIS_PC_MOVE_RATIO_X;
     chassis.vy = rc.ch2 * CHASSIS_RC_MOVE_RATIO_Y / RC_MAX_VALUE * MAX_CHASSIS_VY_SPEED + km.vy * CHASSIS_PC_MOVE_RATIO_Y;
     chassis.vw = rc.ch3 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED + rc.mouse.x * CHASSIS_PC_MOVE_RATIO_R;
-    if(rc.sw2 == RC_MI /*&& recv_flag*/){
+    //当哨兵时，接收上位机信息
+    /*if(rc.sw2 == RC_MI *//*&& recv_flag*//*){
         chassis.vy =  *(int32_t*)&ctrl_rx_data.DATA[0] / 10;
         chassis.vx =  *(int32_t*)&ctrl_rx_data.DATA[4] / 10;
-        /*chassis.vw =  (*(int32_t*)&ctrl_rx_data.DATA[20] / 10000)*180/PI;*/
-
-        /*chassis.vx = (int32_t) (ctrl_rx_data.DATA[3] << 24 | ctrl_rx_data.DATA[2] << 16
-                                | ctrl_rx_data.DATA[1] << 8 | ctrl_rx_data.DATA[0]);
-        chassis.vy = (int32_t) (ctrl_rx_data.DATA[7] << 24 | ctrl_rx_data.DATA[6] << 16
-                                | ctrl_rx_data.DATA[5] << 8 | ctrl_rx_data.DATA[4]);
-        chassis.vw = (int32_t) (ctrl_rx_data.DATA[23] << 24 | ctrl_rx_data.DATA[22] << 16
-                                | ctrl_rx_data.DATA[21] << 8 | ctrl_rx_data.DATA[20]) /1000;*/
+        chassis.vw =  (*(int32_t*)&ctrl_rx_data.DATA[20] / 10000)*180/PI;
         recv_flag = 0;
-    }
+    }*/
 }
 
 

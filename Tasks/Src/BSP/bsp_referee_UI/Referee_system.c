@@ -73,8 +73,7 @@ void Referee_system_Init(uint8_t *  rx1_buf, uint8_t *rx2_buf, uint16_t dma_buf_
     memset(&student_interactive_data_t, 0, sizeof(ext_student_interactive_header_data_t));
     //使能DMA串口接收
     SET_BIT(huart6.Instance->CR3, USART_CR3_DMAR);
-    //使能空闲中断
-    __HAL_UART_ENABLE_IT(&huart6, UART_IT_IDLE);
+
     //失效DMA，并等待直至SxCR_EN寄存器置0，以保证后续的配置数据可以写入
     __HAL_DMA_DISABLE(&hdma_usart6_rx);
     while(hdma_usart6_rx.Instance->CR & DMA_SxCR_EN)
@@ -100,6 +99,8 @@ void Referee_system_Init(uint8_t *  rx1_buf, uint8_t *rx2_buf, uint16_t dma_buf_
     __HAL_DMA_ENABLE(&hdma_usart6_rx);
     //fifo初始化
     fifo_s_init(&RX_AgreementData_FIFO,RX_FIFO_Space,FIFO_BUF_LENGTH);    //创建FIFO存储区域
+    //使能空闲中断
+    __HAL_UART_ENABLE_IT(&huart6, UART_IT_IDLE);
 
 }
 

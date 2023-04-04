@@ -208,29 +208,29 @@ void USART6_IRQHandler(void)
     if(__HAL_UART_GET_FLAG(&huart6,UART_FLAG_IDLE)!=RESET)//鍒ゆ柇鏄惁绌洪棽涓柇
     {
         static uint16_t this_time_rx_len = 0;
-        __HAL_UART_CLEAR_IDLEFLAG(&huart6);      //娓呴櫎绌洪棽涓柇
-        if((hdma_usart6_rx.Instance->CR & DMA_SxCR_CT) == RESET) //濡傛灉褰撳墠鐨勭紦鍐插尯鏄紦鍐插尯0
+        __HAL_UART_CLEAR_IDLEFLAG(&huart6);      //清除空闲中断
+        if((hdma_usart6_rx.Instance->CR & DMA_SxCR_CT) == RESET) //如果当前的缓冲区是缓冲区0
         {
-            //璁＄畻杩欎竴甯ф帴鏀剁殑鏁版嵁鐨勯暱锟??
+            //计算这一帧接收的数据的长度
             __HAL_DMA_DISABLE(&hdma_usart6_rx);
             this_time_rx_len = Agreement_RX_BUF_NUM - __HAL_DMA_GET_COUNTER(huart6.hdmarx);
-            //閲嶆柊璁惧畾鏁版嵁闀垮害
+            //重新设定数据长度
             hdma_usart6_rx.Instance->NDTR = Agreement_RX_BUF_NUM;
-            //鎶婄紦鍐插尯璁剧疆鎴愮紦鍐插尯1
+            //把缓冲区设置成缓冲区1
             hdma_usart6_rx.Instance->CR |= DMA_SxCR_CT;
             __HAL_DMA_ENABLE(&hdma_usart6_rx);
-            //灏嗚繖锟??甯ф暟鎹斁鍏ifo锟??
+            //将这1帧数据放入fifo0
             fifo_s_puts(&RX_AgreementData_FIFO,(char *)RX_AgreementData_Buffer0,this_time_rx_len);
         }
-        else //濡傛灉褰撳墠鐨勭紦鍐插尯鏄紦鍐插尯1
+        else //如果当前的缓冲区是缓冲区1
         {
-            //璁＄畻杩欎竴甯ф帴鏀剁殑鏁版嵁鐨勯暱锟??
+            //计算这一帧接收的数据的长度
             __HAL_DMA_DISABLE(&hdma_usart6_rx);
             this_time_rx_len = Agreement_RX_BUF_NUM - __HAL_DMA_GET_COUNTER(huart6.hdmarx);
-            //osSemaphoreRelease(RefereeRxOKHandle);  //閲婃斁娑堟伅锟??
-            //閲嶆柊璁惧畾鏁版嵁闀垮害
+            //osSemaphoreRelease(RefereeRxOKHandle);  //释放信号量
+            //重新设定数据长度
             hdma_usart6_rx.Instance->NDTR = Agreement_RX_BUF_NUM;
-            //鎶婄紦鍐插尯璁剧疆鎴愮紦鍐插尯0
+            //把缓冲区设置成缓冲区0
             hdma_usart6_rx.Instance->CR &= ~DMA_SxCR_CT;
             __HAL_DMA_ENABLE(&hdma_usart6_rx);
             fifo_s_puts(&RX_AgreementData_FIFO,(char *)RX_AgreementData_Buffer1,this_time_rx_len);

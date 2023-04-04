@@ -6,7 +6,6 @@
 #define HNU_INFANTRY_DOWN_NEW_REFEREE_H
 #include "main.h"
 #include "cmsis_os.h"
-#include "Referee.h"
 #include "Referee_system.h"
 #include "BSP_CRC.h"
 #include "string.h"
