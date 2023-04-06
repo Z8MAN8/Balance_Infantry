@@ -4,6 +4,7 @@
 
 #include <usbd_cdc_if.h>
 #include <BMI088driver.h>
+#include <Referee.h>
 #include "Transmission.h"
 #include "Chassis.h"
 #include "bsp_can.h"
@@ -160,7 +161,10 @@ void Chassis_Send_supercap(void)
 void Chassis_Send_shoot(void) //发送裁判系统对SHOOT的供电情况
 {
     uint8_t sendbuf[8];//发送的数据内容
-    sendbuf[0]=robot_status.mains_power_shooter_output;
+    sendbuf[0] = robot_status.mains_power_shooter_output;
+    sendbuf[1] = robot_status.shooter_id1_17mm_cooling_limit;
+    sendbuf[2] = ext_power_heat_data.shooter_id1_17mm_cooling_heat;
+
     CAN_Send(hcan2,0x134, sendbuf);
 
 }

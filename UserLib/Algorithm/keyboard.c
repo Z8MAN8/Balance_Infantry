@@ -129,17 +129,17 @@ void pc_kb_hook(void)
     if (rc.kb.bit.SHIFT)
     {
         km.move_mode = FAST_MODE;
-        km.max_spd = 3500;
+        km.max_spd = 1100;
     }
     else if (rc.kb.bit.CTRL)
     {
         km.move_mode = SLOW_MODE;
-        km.max_spd = 2500;
+        km.max_spd = 500;
     }
     else
     {
         km.move_mode = NORMAL_MODE;
-        km.max_spd = 3000;
+        km.max_spd = 800;
     }
 
     //add ramp

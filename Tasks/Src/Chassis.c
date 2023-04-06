@@ -3,6 +3,7 @@
 //
 
 #include <tim.h>
+#include <Referee_system.h>
 #include "Chassis.h"
 #include "bsp_uart.h"
 #include "motor.h"
@@ -29,7 +30,7 @@ int16_t chassis_moto_current[4];
 
 //底盘陀螺转速系数
 char spin_flag=0;
-uint8_t spin_conver_flag = 0;
+uint8_t spin_conver_flag = 0; //该标志位为1时，从陀螺模式切出
 float yaw_relative_angle=0;
 
 float chassis_total_x;
@@ -201,8 +202,14 @@ void Chassis_Follow_control(void){
     /*chassis.vw =  -*(int32_t*)&ctrl_rx_data.DATA[20] / 10000.0 * 180/PI
             + rc.ch3 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED;*/
 
-    if(gim_ctrl_mode == GIMBAL_CLOSE_LOOP_ZGYRO || gim_ctrl_mode == GIMBAL_AUTO){
+    if(robot_status.mains_power_gimbal_output && gim_ctrl_mode == GIMBAL_CLOSE_LOOP_ZGYRO || gim_ctrl_mode == GIMBAL_AUTO){
         chassis.vw = PID_Calculate(&rotate_follow, yaw_relative_angle,0);
+        // 限制底盘最大旋转速度，电容低电压时进一步降低
+        VAL_LIMIT(chassis.vw, -MAX_CHASSIS_VW_SPEED, MAX_CHASSIS_VW_SPEED);
+        if(PowerData[1]<=POWER_PROTECT){
+            VAL_LIMIT(chassis.vw, -MAX_CHASSIS_VW_PROTECT_SPEED, MAX_CHASSIS_VW_PROTECT_SPEED);
+        }
+        //TODO: 速度上限及电容保护线可以进一步调试优化
     }
     else{
         chassis.vw = 0;
@@ -215,12 +222,14 @@ void Chassis_Follow_control(void){
         && (abs(rc.mouse.x) <= 1)
         && (abs(rc.mouse.y) <= 1)){
         chassis.vw = 0;
-    }
-    Chassis_Top_handle();*/
+    }*/
+    Chassis_Top_handle();
+    //TODO: 待测试
     Chassis_Custom_control();
 }
 
 void Chassis_Spin_control(void){
+    static char speed;
     Chassis_Get_control_information();
     if(rc.kb.bit.E)
         spin_flag++;
@@ -228,9 +237,20 @@ void Chassis_Spin_control(void){
         spin_flag=0;
         spin_conver_flag = 1;
     }
+    if(PowerData[1]<=POWER_PROTECT){
+        spin_flag = 70; //当超级电容电压较低时，切慢陀螺速度
+        if(PowerData[1]<=POWER_PROTECT_NORMAL){ //当超级电容电压非常低时，切出陀螺模式
+            spin_flag=0;
+            spin_conver_flag = 1;
+        }
+    }
 
-    chassis.vw=2*spin_flag;   //陀螺旋转速度
+    speed = spin_flag;
+    VAL_LIMIT(speed,0,120) //TODO:可以考虑再调低，或者找到一个与电容充电相当的速度
+    chassis.vw=2*speed;   //陀螺旋转速度
     Chassis_Top_handle();
+    VAL_LIMIT(chassis.vx,-400,400);
+    VAL_LIMIT(chassis.vy,-500,500);
     Chassis_Custom_control();
 }
 
@@ -254,6 +274,7 @@ void Chassis_Get_control_information(void){
     //遥控器以及鼠标对底盘的控制信息转化为标准单位，平移为(mm/s)旋转为(degree/s)
     chassis.vx = rc.ch1 * CHASSIS_RC_MOVE_RATIO_X / RC_MAX_VALUE * MAX_CHASSIS_VX_SPEED + km.vx * CHASSIS_PC_MOVE_RATIO_X;
     chassis.vy = rc.ch2 * CHASSIS_RC_MOVE_RATIO_Y / RC_MAX_VALUE * MAX_CHASSIS_VY_SPEED + km.vy * CHASSIS_PC_MOVE_RATIO_Y;
+
     chassis.vw = rc.ch3 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED + rc.mouse.x * CHASSIS_PC_MOVE_RATIO_R;
     //当哨兵时，接收上位机信息
     /*if(rc.sw2 == RC_MI *//*&& recv_flag*//*){

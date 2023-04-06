@@ -59,7 +59,7 @@
 
 /* 鼠标键盘模式下的底盘最大速度限制 */
 /* 底盘平移速度 */
-#define CHASSIS_PC_MOVE_RATIO_X 0.5f
+#define CHASSIS_PC_MOVE_RATIO_X 0.8f
 /* 底盘前进速度 */
 #define CHASSIS_PC_MOVE_RATIO_Y 1.0f
 /* 底盘旋转速度，只在底盘开环模式下使用 */
@@ -129,6 +129,15 @@
 #define PIT_ANGLE_MAX        32.0f
 /* pitch轴最大俯角 */
 #define PIT_ANGLE_MIN        -31.5f
+
+/* 超级电容低压保护值--针对陀螺 */
+#define POWER_PROTECT        16.0
+/* 超级电容低压保护值--非陀螺时 */
+#define POWER_PROTECT_NORMAL        14.8
+/* 超级电容低压下，底盘旋转最大速度，单位是度每秒 */
+#define MAX_CHASSIS_VW_PROTECT_SPEED 150
+/* 跟随时底盘旋转最大速度，单位是度每秒 */
+#define MAX_CHASSIS_VW_SPEED 250  //更低的限幅是为了避免比赛猛甩浪费功率
 
 
 
