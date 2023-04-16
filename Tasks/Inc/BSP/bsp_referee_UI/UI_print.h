@@ -3,7 +3,7 @@
 //
 #include "stdio.h"
 #define ARobot_ID UI_Data_RobotID_BStandard3
-#define ACilent_ID UI_Data_RobotID_BStandard3
+#define ACilent_ID UI_Data_CilentID_BStandard3
 /****************************数据帧起始字节，为固定值********************/
 #define UI_SOF 0xA5
 /****************************cmd_id********************/

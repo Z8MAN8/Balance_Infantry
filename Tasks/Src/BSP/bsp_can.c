@@ -9,8 +9,9 @@
 static CAN_TxHeaderTypeDef  tx_message;
 float PowerData [4]__attribute__ ((section(".ccmram")));
 _Bool fric_wheel_run;
-_Bool cap_open_flag;
+_Bool cap_ok;
 uint8_t fric_flag;
+uint8_t shoot_ok = 0; //摩擦轮转动正常标志位
 
 
 void CAN_Init(){
@@ -90,15 +91,16 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
                     yaw_motor_speed=rx_data[4];
                     yaw_motor_speed=yaw_motor_speed<<8;
                     yaw_motor_speed=yaw_motor_speed|rx_data[5];*/
-                    cap_open_flag=0x1&rx_data[6];
-                    fric_wheel_run=(0x2&rx_data[6])>>1;
-                    fric_flag=(0xC&rx_data[6])>>2;
+
+                    /*fric_wheel_run=(0x2&rx_data[6])>>1;
+                    fric_flag=(0xC&rx_data[6])>>2;*/
                 }break;
 
                 // 云台状态数据
                 case CAN_GIM_STATE: {
-                    // 8位拼接成32位int
-                    gim_ctrl_mode = rx_data[0];
+                    gim_ctrl_mode   =   rx_data[0];
+                    shoot_ok        =   rx_data[1];
+                    cap_ok          =   rx_data[2];
                 }
                 default:break;
             }

@@ -93,14 +93,14 @@ void Referee_system_Init(uint8_t *  rx1_buf, uint8_t *rx2_buf, uint16_t dma_buf_
     //enable double memory buffer
     //使能双缓冲区
     SET_BIT(hdma_usart6_rx.Instance->CR, DMA_SxCR_DBM);
-
+    //使能空闲中断
+    __HAL_UART_ENABLE_IT(&huart6, UART_IT_IDLE);
     //enable DMA
     //使能DMA
     __HAL_DMA_ENABLE(&hdma_usart6_rx);
     //fifo初始化
     fifo_s_init(&RX_AgreementData_FIFO,RX_FIFO_Space,FIFO_BUF_LENGTH);    //创建FIFO存储区域
-    //使能空闲中断
-    __HAL_UART_ENABLE_IT(&huart6, UART_IT_IDLE);
+
 
 }
 

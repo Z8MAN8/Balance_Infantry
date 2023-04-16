@@ -175,7 +175,7 @@ void Referee_Task(void const * argument)
         }
         //判断底盘是否为陀螺状态，打开为橙色，没打开为绿色
         if(spin_flag==0)
-            fric_colour=3;
+            spin_colour=3;
         else
             spin_colour=2;
         num=(PowerData[1]/PowerData[0]-0.45)*360/0.47;
@@ -189,15 +189,15 @@ void Referee_Task(void const * argument)
         }
 
         //判断摩擦轮是否打开，打开为橙色，没打开为绿色
-        if(fric_wheel_run==0)
+        if(shoot_ok==0)
             fric_colour=3;
         else
             fric_colour=2;
 
         // 判断弹仓盖是否打开，打开为橙色，没打开为绿色
-        if(cap_open_flag==0)
+        if(cap_ok == 0)
             cap_open_colour=3;
-        else if(cap_open_flag==1)
+        else
             cap_open_colour=2;
 
         osDelayUntil(&referee_wake_time, 10);

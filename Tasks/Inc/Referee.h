@@ -26,7 +26,8 @@ extern float PowerData[4];
 extern char spin_flag;
 extern uint8_t fric_flag;
 extern _Bool fric_wheel_run;
-extern _Bool cap_open_flag;
+extern _Bool cap_ok;
 extern ext_game_robot_status_t ext_game_robot_status;
 extern ext_power_heat_data_t ext_power_heat_data;
+extern uint8_t shoot_ok;
 #endif //HNU_INFANTRY_DOWN_NEW_REFEREE_H
