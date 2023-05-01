@@ -495,3 +495,4 @@ void Referee_Data_Unpack();
 void Referee_Data_Solve(uint8_t* referee_data_frame);
 
 extern ext_game_robot_status_t                 robot_status;
+extern ext_power_heat_data_t                   power_heat_data_t;

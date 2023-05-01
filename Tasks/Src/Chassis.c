@@ -4,6 +4,7 @@
 
 #include <tim.h>
 #include <Referee_system.h>
+#include <Referee.h>
 #include "Chassis.h"
 #include "bsp_uart.h"
 #include "motor.h"
@@ -41,6 +42,14 @@ float chassis_total_w;
 GimbalModeType gim_ctrl_mode;
 
 unsigned char recv_flag = 0;   //虚拟串口接收标志位
+
+#ifdef RM1V1
+int32_t chassis_speed_max_vw = 160; // 180测试也没问题，但转速过快可能没意义
+//int32_t chassis_speed_protect_vw;
+#elif RM3V3
+int32_t chassis_speed_max_vw = 80;
+#endif
+
 
 
 void Chassis_Task(void const * argument){
@@ -202,7 +211,7 @@ void Chassis_Follow_control(void){
     /*chassis.vw =  -*(int32_t*)&ctrl_rx_data.DATA[20] / 10000.0 * 180/PI
             + rc.ch3 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED;*/
 
-    if(robot_status.mains_power_gimbal_output && gim_ctrl_mode == GIMBAL_CLOSE_LOOP_ZGYRO || gim_ctrl_mode == GIMBAL_AUTO){
+    if(robot_status.mains_power_gimbal_output && (gim_ctrl_mode == GIMBAL_CLOSE_LOOP_ZGYRO || gim_ctrl_mode == GIMBAL_AUTO)){
         chassis.vw = PID_Calculate(&rotate_follow, yaw_relative_angle,0);
         // 限制底盘最大旋转速度，电容低电压时进一步降低
         VAL_LIMIT(chassis.vw, -MAX_CHASSIS_VW_SPEED, MAX_CHASSIS_VW_SPEED);
@@ -213,6 +222,7 @@ void Chassis_Follow_control(void){
     }
     else{
         chassis.vw = 0;
+        gim_ctrl_mode = GIMBAL_RELAX; //主要覆盖云台断电下来不及更新的错误帧
     }
 
     /*if ((abs(rc.ch1) <= 10)
@@ -233,6 +243,9 @@ void Chassis_Spin_control(void){
     Chassis_Get_control_information();
     if(rc.kb.bit.E)
         spin_flag++;
+#ifdef RM1V1
+        spin_flag = chassis_speed_max_vw;
+#endif
     if(rc.kb.bit.E && rc.kb.bit.SHIFT){
         spin_flag=0;
         spin_conver_flag = 1;
@@ -246,11 +259,30 @@ void Chassis_Spin_control(void){
     }
 
     speed = spin_flag;
-    VAL_LIMIT(speed,0,120) //TODO:可以考虑再调低，或者找到一个与电容充电相当的速度
+
+    //TODO:参数待整定
+#ifdef RM3V3
+    switch (robot_status.robot_level) { //目前为血量优先模式
+        case 1:{   //1级功率上限为45
+            chassis_speed_max_vw = 90;
+        }break;
+        case 2:{   //1级功率上限为50
+            chassis_speed_max_vw = 120;
+        }break;
+        case 3:{   //1级功率上限为55
+            chassis_speed_max_vw = 140;
+        }break;
+    }
+#endif
+
+    VAL_LIMIT(speed,80,chassis_speed_max_vw) //TODO:可以考虑再调低，或者找到一个与电容充电相当的速度
     chassis.vw=2*speed;   //陀螺旋转速度
     Chassis_Top_handle();
-    VAL_LIMIT(chassis.vx,-400,400);
-    VAL_LIMIT(chassis.vy,-500,500);
+
+    /*VAL_LIMIT(chassis.vx,-400,400);
+    VAL_LIMIT(chassis.vy,-500,500);*/
+    VAL_LIMIT(chassis.vx,-800,800);
+    VAL_LIMIT(chassis.vy,-800,800);
     Chassis_Custom_control();
 }
 
@@ -372,7 +404,7 @@ void Chassis_Calculate_close_loop(void){
 
 /* 底盘陀螺处理 */
 void Chassis_Top_handle(void){
-    float rad=-(yaw_relative_angle/RADIAN_COEF);
+    float rad=-((yaw_relative_angle-SIDE_DEGREE)/RADIAN_COEF);
     float a=cosf(rad),b=sinf(rad);
     float temp_x=a*chassis.vx+b*chassis.vy;
     float temp_y=-b*chassis.vx+a*chassis.vy;

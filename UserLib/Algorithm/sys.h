@@ -161,6 +161,19 @@ if((val) <= (min))\
 else if((val) >= (max))\
 {\
   (val) = (max);\
-}\
+}                               \
+
+/* 选择比赛类型 */
+//#define RM1V1 1
+#define RM3V3 3
+
+/* 选择底盘和云台的配合模式 */
+#define SIDEWAYS 1          //侧身模式
+
+#ifdef SIDEWAYS
+#define SIDE_DEGREE -36.f //侧身角度
+#else
+#define SIDE_DEGREE 0.f //侧身角度
+#endif
 
 #endif

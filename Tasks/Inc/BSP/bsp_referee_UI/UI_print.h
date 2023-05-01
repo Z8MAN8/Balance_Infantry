@@ -2,8 +2,14 @@
 // Created by 16933 on 2022/3/15.
 //
 #include "stdio.h"
+#include "sys.h"
+#ifdef RM1V1
 #define ARobot_ID UI_Data_RobotID_BStandard3
 #define ACilent_ID UI_Data_CilentID_BStandard3
+#elif RM3V3
+#define ARobot_ID UI_Data_RobotID_RStandard1
+#define ACilent_ID UI_Data_CilentID_RStandard1
+#endif
 /****************************数据帧起始字节，为固定值********************/
 #define UI_SOF 0xA5
 /****************************cmd_id********************/

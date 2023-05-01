@@ -126,20 +126,21 @@ static void key_fsm(kb_state_e *sta, uint8_t key)
   */
 void pc_kb_hook(void)
 {
+    //TODO:参数待整定
     if (rc.kb.bit.SHIFT)
     {
         km.move_mode = FAST_MODE;
-        km.max_spd = 1100;
+        km.max_spd = 2000/*1100*/;
     }
     else if (rc.kb.bit.CTRL)
     {
         km.move_mode = SLOW_MODE;
-        km.max_spd = 500;
+        km.max_spd = 800/*500*/;
     }
     else
     {
         km.move_mode = NORMAL_MODE;
-        km.max_spd = 800;
+        km.max_spd = 1500/*800*/;
     }
 
     //add ramp
