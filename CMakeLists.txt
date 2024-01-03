@@ -1,4 +1,4 @@
-#´ËÎÄ¼þ´ÓÄ£°å×Ô¶¯Éú³É! ÇëÎð¸ü¸Ä!
+#ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½! ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½!
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_VERSION 1)
 cmake_minimum_required(VERSION 3.20)
@@ -22,7 +22,7 @@ set(CMAKE_C_STANDARD 11)
 add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
 add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
-link_directories(UserLib)
+link_directories(src/algorithm/arm_math)
 
 #Uncomment for software floating point
 #add_compile_options(-mfloat-abi=soft)
@@ -50,20 +50,39 @@ else ()
 endif ()
 
 include_directories(Core/Inc
-        Tasks/Inc
-        Tasks/Inc/BSP
-        Tasks/Inc/BSP/bsp_referee_UI
-        UserLib
-        UserLib/BMI088
-        UserLib/Motor
-        UserLib/Algorithm
+        src
+        src/algorithm
+        src/algorithm/arm_math
+        src/algorithm/kalman_filter
+        src/algorithm/pid
+        src/algorithm/QuaternionEKF
+        src/algorithm/user_lib
+        src/modules
+        src/modules/BMI088
+        src/modules/can
+        src/modules/dwt
+        src/modules/ipc
+        src/modules/log
+        src/modules/leg
+        src/modules/motor
+        src/modules/motor/DJI_motor
+        src/modules/motor/LK_motor
+        src/modules/motor/HT_motor
+        src/modules/pwm
+        src/modules/rc/sbus
+        src/task
+        src/task/ins
+        src/task/motor
+        src/task/cmd
+        src/task/chassis
+        Middlewares/Third_Party/SEGGER/Config
+        Middlewares/Third_Party/SEGGER/RTT
         Drivers/STM32F4xx_HAL_Driver/Inc Drivers/STM32F4xx_HAL_Driver/Inc/Legacy Middlewares/Third_Party/FreeRTOS/Source/include Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F Middlewares/ST/STM32_USB_Device_Library/Core/Inc Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc Drivers/CMSIS/Device/ST/STM32F4xx/Include Drivers/CMSIS/Include)
 
 add_definitions(-DUSE_HAL_DRIVER -DSTM32F407xx)
 
 file(GLOB_RECURSE SOURCES "startup/*.*" "Middlewares/*.*" "Drivers/*.*" "Core/*.*"
-        "UserLib/*.*" "UserLib/BMI088/*.*" "UserLib/Motor/*.*" "UserLib/Algorithm/*.*"
-        "Tasks/Src/*.*" "Tasks/Src/BSP/*.*" "Tasks/Src/BSP/bsp_referee_UI/*.*")
+        "src/*.*")
 
 set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32F407IGHx_FLASH.ld)
 

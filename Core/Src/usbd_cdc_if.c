@@ -19,11 +19,9 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include <Chassis.h>
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-#include "Transmission.h"
 #include "math.h"
 /* USER CODE END INCLUDE */
 
@@ -265,46 +263,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
-  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-  uint8_t sc = 0, ac = 0;
-//TODO: 考虑不同帧长的情况
-    if(*(uint16_t*)Buf=0xaaaa)
-    {
-        memcpy(&upper_rx_data,Buf,sizeof(upper_rx_data));
-        recv_flag=1;
-
-        switch (upper_rx_data.ID) {
-            case GIMBAL:{
-                memcpy(&rpy_rx_data,&upper_rx_data,sizeof(rpy_rx_data));
-                sc = (uint8_t)Sumcheck_Cal(upper_rx_data) >> 8;
-                ac = (uint8_t)Sumcheck_Cal(upper_rx_data);
-                if(upper_rx_data.SC != sc || upper_rx_data.AC != ac)
-                {
-                    memset(&rpy_rx_data, 0, sizeof(rpy_rx_data));
-                    recv_flag=0;
-                }
-            }break;
-
-            case CHASSIS_CTRL:{
-                memcpy(&ctrl_rx_data,&upper_rx_data,sizeof(ctrl_rx_data));
-                /*sc = (uint8_t)Sumcheck_Cal(upper_rx_data) >> 8;
-                ac = (uint8_t)Sumcheck_Cal(upper_rx_data);
-                if(upper_rx_data.SC != sc || upper_rx_data.AC != ac)
-                {
-                    memset(&ctrl_rx_data, 0, sizeof(ctrl_rx_data));
-                    recv_flag=0;
-                }*/
-            }break;
-            default:{
-                recv_flag=0;
-            }break;
-        }
-        memset(&upper_rx_data, 0, sizeof(upper_rx_data));
-    }
-
-  return (USBD_OK);
   /* USER CODE END 6 */
 }
 
@@ -323,12 +282,7 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 7 */
-  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)hUsbDeviceFS.pClassData;
-  if (hcdc->TxState != 0){
-    return USBD_BUSY;
-  }
-  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, Buf, Len);
-  result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
+
   /* USER CODE END 7 */
   return result;
 }
@@ -349,11 +303,7 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 13 */
-  UNUSED(Buf);
-  UNUSED(Len);
-  UNUSED(epnum);
-  USB_CONNECT_OK = 1;
-  USB_SEND_OK++;
+
   /* USER CODE END 13 */
   return result;
 }

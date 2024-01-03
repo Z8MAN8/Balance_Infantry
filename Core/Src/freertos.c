@@ -47,24 +47,14 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-osThreadId CHASSIS_TASKHandle;
-osThreadId DETECT_TASKHandle;
-osThreadId TRANSMISSIONHandle;
-osThreadId DEBUG_TASKHandle;
-osThreadId REFEREE_TASKHandle;
-osThreadId INS_TASKHandle;
+osThreadId defaultTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-void Chassis_Task(void const * argument);
-void Detect_Task(void const * argument);
-void Transmission_Task(void const * argument);
-void Debug_Task(void const * argument);
-void Referee_Task(void const * argument);
-void Ins_Task(void const * argument);
+void StartDefaultTask(void const * argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -112,29 +102,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of CHASSIS_TASK */
-  osThreadDef(CHASSIS_TASK, Chassis_Task, osPriorityNormal, 0, 256);
-  CHASSIS_TASKHandle = osThreadCreate(osThread(CHASSIS_TASK), NULL);
-
-  /* definition and creation of DETECT_TASK */
-  osThreadDef(DETECT_TASK, Detect_Task, osPriorityNormal, 0, 128);
-  DETECT_TASKHandle = osThreadCreate(osThread(DETECT_TASK), NULL);
-
-  /* definition and creation of TRANSMISSION */
-  osThreadDef(TRANSMISSION, Transmission_Task, osPriorityNormal, 0, 128);
-  TRANSMISSIONHandle = osThreadCreate(osThread(TRANSMISSION), NULL);
-
-  /* definition and creation of DEBUG_TASK */
-  osThreadDef(DEBUG_TASK, Debug_Task, osPriorityNormal, 0, 128);
-  DEBUG_TASKHandle = osThreadCreate(osThread(DEBUG_TASK), NULL);
-
-  /* definition and creation of REFEREE_TASK */
-  osThreadDef(REFEREE_TASK, Referee_Task, osPriorityNormal, 0, 2048);
-  REFEREE_TASKHandle = osThreadCreate(osThread(REFEREE_TASK), NULL);
-
-  /* definition and creation of INS_TASK */
-  osThreadDef(INS_TASK, Ins_Task, osPriorityNormal, 0, 1024);
-  INS_TASKHandle = osThreadCreate(osThread(INS_TASK), NULL);
+  /* definition and creation of defaultTask */
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -142,114 +112,25 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_Chassis_Task */
+/* USER CODE BEGIN Header_StartDefaultTask */
 /**
-  * @brief  Function implementing the CHASSIS_TASK thread.
+  * @brief  Function implementing the defaultTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_Chassis_Task */
-__weak void Chassis_Task(void const * argument)
+/* USER CODE END Header_StartDefaultTask */
+__weak void StartDefaultTask(void const * argument)
 {
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN Chassis_Task */
+  /* USER CODE BEGIN StartDefaultTask */
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    HAL_GPIO_TogglePin(LED_B_GPIO_Port, LED_B_Pin);
+    osDelay(1000);
   }
-  /* USER CODE END Chassis_Task */
-}
-
-/* USER CODE BEGIN Header_Detect_Task */
-/**
-* @brief Function implementing the DETECT_TASK thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_Detect_Task */
-__weak void Detect_Task(void const * argument)
-{
-  /* USER CODE BEGIN Detect_Task */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END Detect_Task */
-}
-
-/* USER CODE BEGIN Header_Transmission_Task */
-/**
-* @brief Function implementing the TRANSMISSION thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_Transmission_Task */
-__weak void Transmission_Task(void const * argument)
-{
-  /* USER CODE BEGIN Transmission_Task */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END Transmission_Task */
-}
-
-/* USER CODE BEGIN Header_Debug_Task */
-/**
-* @brief Function implementing the DEBUG_TASK thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_Debug_Task */
-__weak void Debug_Task(void const * argument)
-{
-  /* USER CODE BEGIN Debug_Task */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END Debug_Task */
-}
-
-/* USER CODE BEGIN Header_Referee_Task */
-/**
-* @brief Function implementing the REFEREE_TASK thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_Referee_Task */
-__weak void Referee_Task(void const * argument)
-{
-  /* USER CODE BEGIN Referee_Task */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END Referee_Task */
-}
-
-/* USER CODE BEGIN Header_Ins_Task */
-/**
-* @brief Function implementing the INS_TASK thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_Ins_Task */
-__weak void Ins_Task(void const * argument)
-{
-  /* USER CODE BEGIN Ins_Task */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END Ins_Task */
+  /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/

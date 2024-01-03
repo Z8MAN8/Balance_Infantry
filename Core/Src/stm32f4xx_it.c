@@ -24,7 +24,7 @@
 #include "task.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "bsp_uart.h"
+#include "rm_module.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,6 +62,7 @@ extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern DMA_HandleTypeDef hdma_usart3_rx;
 extern DMA_HandleTypeDef hdma_usart6_rx;
@@ -263,6 +264,20 @@ void TIM2_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM3 global interrupt.
+  */
+void TIM3_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM3_IRQn 0 */
+
+  /* USER CODE END TIM3_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim3);
+  /* USER CODE BEGIN TIM3_IRQn 1 */
+
+  /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
   * @brief This function handles USART1 global interrupt.
   */
 void USART1_IRQHandler(void)
@@ -282,7 +297,7 @@ void USART1_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
-    if(huart3.Instance->SR & UART_FLAG_RXNE)//??????????
+    if(huart3.Instance->SR & UART_FLAG_RXNE)
     {
         __HAL_UART_CLEAR_PEFLAG(&huart3);
     }
@@ -295,52 +310,57 @@ void USART3_IRQHandler(void)
         if ((hdma_usart3_rx.Instance->CR & DMA_SxCR_CT) == RESET)
         {
             /* Current memory buffer used is Memory 0 */
-
-            //disable DMA
-
+            //失效DMA
             __HAL_DMA_DISABLE(&hdma_usart3_rx);
 
             //get receive data length, length = set_data_length - remain_length
+            //获取接收数据长度,长度 = 设定长度 - 剩余长度
             this_time_rx_len = SBUS_RX_BUF_NUM - hdma_usart3_rx.Instance->NDTR;
 
-            //reset set_data_lenght
+            //重新设定数据长度
             hdma_usart3_rx.Instance->NDTR = SBUS_RX_BUF_NUM;
 
-            //set memory buffer 1
+            //设定缓冲�?1
             hdma_usart3_rx.Instance->CR |= DMA_SxCR_CT;
 
-
+            //使能DMA
             __HAL_DMA_ENABLE(&hdma_usart3_rx);
 
-            if(this_time_rx_len == RC_FRAME_LENGTH)
+            if(this_time_rx_len == SBUS_FRAME_SIZE)
             {
-                Remote_Data_handle(&rc, sbus_rx_buf[0]);
+                //处理遥控器数�?
+                sbus_rc_decode(sbus_rx_buf[0]);
+//                rt_timer_start(rc_timer);
             }
         }
         else
         {
             /* Current memory buffer used is Memory 1 */
-            //disable DMA
+            //失效DMA
             __HAL_DMA_DISABLE(&hdma_usart3_rx);
 
             //get receive data length, length = set_data_length - remain_length
+            //获取接收数据长度,长度 = 设定长度 - 剩余长度
             this_time_rx_len = SBUS_RX_BUF_NUM - hdma_usart3_rx.Instance->NDTR;
 
-            //reset set_data_lenght
+            //重新设定数据长度
             hdma_usart3_rx.Instance->NDTR = SBUS_RX_BUF_NUM;
 
-            //set memory buffer 0
+            //设定缓冲�?0
             DMA1_Stream1->CR &= ~(DMA_SxCR_CT);
 
-            //enable DMA
+            //使能DMA
             __HAL_DMA_ENABLE(&hdma_usart3_rx);
 
-            if(this_time_rx_len == RC_FRAME_LENGTH)
+            if(this_time_rx_len == SBUS_FRAME_SIZE)
             {
-                Remote_Data_handle(&rc, sbus_rx_buf[1]);
+                //处理遥控器数�?
+                sbus_rc_decode(sbus_rx_buf[1]);
+//                rt_timer_start(rc_timer);
             }
         }
     }
+
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
@@ -363,17 +383,17 @@ void DMA2_Stream1_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles CAN2 RX0 interrupts.
+  * @brief This function handles CAN2 RX1 interrupt.
   */
-void CAN2_RX0_IRQHandler(void)
+void CAN2_RX1_IRQHandler(void)
 {
-  /* USER CODE BEGIN CAN2_RX0_IRQn 0 */
+  /* USER CODE BEGIN CAN2_RX1_IRQn 0 */
 
-  /* USER CODE END CAN2_RX0_IRQn 0 */
+  /* USER CODE END CAN2_RX1_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan2);
-  /* USER CODE BEGIN CAN2_RX0_IRQn 1 */
+  /* USER CODE BEGIN CAN2_RX1_IRQn 1 */
 
-  /* USER CODE END CAN2_RX0_IRQn 1 */
+  /* USER CODE END CAN2_RX1_IRQn 1 */
 }
 
 /**

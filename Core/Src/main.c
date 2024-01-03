@@ -29,10 +29,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "bsp_uart.h"
-#include "bsp_can.h"
-#include "bsp_dwt.h"
-#include "BMI088driver.h"
+#include "rm_module.h"
+#include "robot.h"
 
 /* USER CODE END Includes */
 
@@ -106,13 +104,15 @@ int main(void)
   MX_TIM10_Init();
   MX_TIM2_Init();
   MX_TIM8_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-    MX_USB_DEVICE_Init();
-    DWT_Init(168);
-    CAN_Init();
-    Remote_Control_init();
-    BMI088_init(&hspi1);
-    HAL_TIM_Base_Start_IT(&htim2);
+  dwt_init(168);
+  CAN_service_init();
+  sbus_rc_init();
+  BMI088_init(&hspi1);
+  HAL_TIM_Base_Start_IT(&htim2);
+  robot_init();
+  HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
   /* Call init function for freertos objects (in freertos.c) */
