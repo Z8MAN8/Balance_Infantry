@@ -63,6 +63,8 @@
 #define WHEEL_DISTANCE    0.110f
 /* 底盘轮子半径(m) */
 #define WHEEL_RADIUS      0.0675f
+/* 底盘控制间隔(ms) */
+#define CHASSIS_PERIOD    1.0f
 #else
 /* 底盘轮距(mm) */
 #define WHEELTRACK        300
@@ -86,7 +88,7 @@
 #define MAX_CHASSIS_VX_SPEED 5000
 #define MAX_CHASSIS_VY_SPEED 5000
 /* 底盘旋转最大速度，单位是度每秒 */
-#define MAX_CHASSIS_VR_SPEED 8
+#define MAX_CHASSIS_VR_SPEED 360
 
 /* --------------------------------- 底盘PID参数 -------------------------------- */
 /* 电机速度环 */

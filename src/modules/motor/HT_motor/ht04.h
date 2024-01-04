@@ -68,7 +68,7 @@ typedef struct ht_motor_object
 
     /* 电机控制相关 */
     void *controller;            // 电机控制器
-    ht_motor_para_t (*control)(ht_motor_measure_t measure);   // 控制电机的接口 用户可以自定义,返回值为ht_motor_para_t 类型控制参数
+    ht_motor_para_t (*control)(ht_motor_measure_t measure);   // 控制电机的接口 用户可以自定义,返回值为 ht_motor_para_t 类型控制参数
     void (*set_mode)(struct ht_motor_object *motor, ht_motor_mode_e cmd);    // 用户可以调用改方法设置电机模式
 } ht_motor_object_t;
 

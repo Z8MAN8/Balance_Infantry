@@ -19,6 +19,7 @@
 //#include "arm_math.h"
 #include "user_lib.h"
 #include "pid.h"
+#include "ramp.h"
 #include "kalman_filter.h"
 #include "QuaternionEKF.h"
 

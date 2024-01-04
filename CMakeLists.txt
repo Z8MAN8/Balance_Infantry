@@ -55,6 +55,7 @@ include_directories(Core/Inc
         src/algorithm/arm_math
         src/algorithm/kalman_filter
         src/algorithm/pid
+        src/algorithm/ramp
         src/algorithm/QuaternionEKF
         src/algorithm/user_lib
         src/modules

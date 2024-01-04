@@ -43,10 +43,10 @@ void cmd_control_task(void)
  */
 static void remote_to_cmd(void)
 {
-// TODO: 目前状态机转换较为简单，有很多优化和改进空间
+   // TODO: 目前状态机转换较为简单，有很多优化和改进空间
    //遥控器的控制信息转化为标准单位，平移为(mm/s)旋转为(degree/s)
-   chassis_cmd_data.vx = rc_now->ch1 * CHASSIS_RC_MOVE_RATIO_X / RC_MAX_VALUE * MAX_CHASSIS_VX_SPEED;
-   chassis_cmd_data.vy = rc_now->ch2 * CHASSIS_RC_MOVE_RATIO_Y / RC_MAX_VALUE * MAX_CHASSIS_VY_SPEED;
+   chassis_cmd_data.vx = rc_now->ch2 * CHASSIS_RC_MOVE_RATIO_X / RC_MAX_VALUE * MAX_CHASSIS_VX_SPEED;
+   chassis_cmd_data.vy = rc_now->ch1 * CHASSIS_RC_MOVE_RATIO_Y / RC_MAX_VALUE * MAX_CHASSIS_VY_SPEED;
    chassis_cmd_data.vw = rc_now->ch4 * CHASSIS_RC_MOVE_RATIO_R / RC_MAX_VALUE * MAX_CHASSIS_VR_SPEED;
    // TODO: 轮腿前期调试
 /*    chassis_cmd_data.leg_length = rc_now->ch2 * ratio + base;          // 腿长

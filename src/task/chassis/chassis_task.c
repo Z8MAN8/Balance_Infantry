@@ -44,15 +44,23 @@ static void chassis_sub_pull(void);
 #define HT_OFFSET_LB  0.44154f  // 左下电机 0.3221
 #define HT_OFFSET_RB -0.45280f  // 右下电机 -0.3366
 /* 髋关节电机扭矩限制 */
-#define HT_OUTPUT_LIMIT 5.0f
+#define HT_OUTPUT_LIMIT 10.0f
 #define HT_INIT_OUT 1.0f   // 电机初始化时的输出扭矩,确保能撞到限位
 #define LK_OUTPUT_LIMIT 3.0f
 #define LK_TOR_TO_CUR 406.21344  // LK9025 扭矩转换电流系数
+/* 整体运动限制 */
+#define POSITION_X_LIMIT 0.5f  // LQR控制时的位移限制 m
+#define VELOCITY_X_LIMIT 4.0f  // LQR控制时的位移速度限制 m/s
 
 static pid_obj_t *follow_pid; // 用于底盘跟随云台计算vw
 static pid_obj_t *theta_pid;  // 双腿角度协调控制
+static pid_obj_t *yaw_pid;    // 航向角控制， 输出为vx的补偿，与vx期望累积
+static pid_obj_t *roll_pid;   // 横滚角控制
+static float yaw_target;
+static float pos_x_offset[2]; // 底盘x位移的偏置，倒地自起后重置
 
 static void leg_calc();
+static float vx_change_limit(float vx_cmd, float vx_now);
 
 /* 没有加入LQR前测试VMC用 */
 static struct leg_controller_t{
@@ -95,14 +103,14 @@ static void motor_relax();
                 {-10.8493,  -0.9343,  -1.2190,  -1.7940,   7.3875,   0.9810,   16.1106,   1.1238,   2.3949,   3.2798,  15.0915,   0.9895},	//K BOT 160
                 {-14.0165,  -1.4406,  -1.3401,  -1.9953,   5.8883,   0.8523,   15.8110,   1.1699,   1.6610,   2.2880,  18.7949,   1.4551},	//K MID 240
                 {-16.2276,  -1.9088,  -1.3897,  -2.0973,   4.8373,   0.7551,   15.0941,   1.1371,   1.2084,   1.6726,  20.6109,   1.6993},	//K TOP 320
-        };*/  //1000hz
+        };  //1000hz*/
 static float LQR_k[3][12]=
         {
                 //Order: K00 K01 K02 K03 K04 K05 K10 K11 K12 K13 K14 K15
-                {-10.3549,  -0.8828,  -1.1094,  -1.6378,   7.1043,   0.9376,   14.7306,   0.9924,   2.1032,   2.8749,  14.8558,   1.0361},	//K BOT 160
-                {-14.0165,  -1.4406,  -1.3401,  -1.9953,   5.8883,   0.8523,   15.8110,   1.1699,   1.6610,   2.2880,  18.7949,   1.4551},	//K MID 240
-                {-16.2276,  -1.9088,  -1.3897,  -2.0973,   4.8373,   0.7551,   15.0941,   1.1371,   1.2084,   1.6726,  20.6109,   1.6993},	//K TOP 320
-        }; // 500hz
+                {-10.3992,  -0.9331,  -0.4549,  -1.7546,   7.2587,   0.9680,   15.3052,   1.1763,   0.9337,   3.4995,  13.9384,   0.9096},	//K BOT 160
+                {-13.7472,  -1.4827,  -0.5207,  -2.0187,   5.9456,   0.8669,   15.6191,   1.2992,   0.6813,   2.5643,  17.3396,   1.3307},	//K MID 240
+                {-16.1640,  -2.0019,  -0.5512,  -2.1502,   4.9823,   0.7846,   15.2672,   1.3208,   0.5151,   1.9467,  19.1084,   1.56559},	//K TOP 320
+        }; // 700hz Q=diag([100 1 100 1000 5000 1]) R=[240 0;0 25]
 
 /* [T Tp(髋)] */
 static float LQROutBuf[2][2]={0};
@@ -125,11 +133,18 @@ static void LQR_cal()
 {
 	//Calculate error
 	arm_mat_sub_f32(&MatLQRObs_L, &MatLQRRef_L, &MatLQRErrX_L);
-	//Calculate output value
-	arm_mat_mult_f32(&MatLQRNegK, &MatLQRErrX_L, &MatLQROutU_L);
-
     //Calculate error
     arm_mat_sub_f32(&MatLQRObs_R, &MatLQRRef_R, &MatLQRErrX_R);
+
+    // TODO:加入斜坡控制，避免较大振荡, 目前的限制是不合理的，反而会让系统无法快速收敛
+    // 对期望值进行限幅
+/*    LIMIT_MIN_MAX(LQRXerrorBuf[LEFT][2], -POSITION_X_LIMIT, POSITION_X_LIMIT);
+    LIMIT_MIN_MAX(LQRXerrorBuf[RIGHT][2], -POSITION_X_LIMIT, POSITION_X_LIMIT);
+    LIMIT_MIN_MAX(LQRXerrorBuf[LEFT][3], -VELOCITY_X_LIMIT, VELOCITY_X_LIMIT);
+    LIMIT_MIN_MAX(LQRXerrorBuf[RIGHT][3], -VELOCITY_X_LIMIT, VELOCITY_X_LIMIT);*/
+
+    //Calculate output value
+    arm_mat_mult_f32(&MatLQRNegK, &MatLQRErrX_L, &MatLQROutU_L);
     //Calculate output value
     arm_mat_mult_f32(&MatLQRNegK, &MatLQRErrX_R, &MatLQROutU_R);
 }
@@ -155,21 +170,32 @@ static void update_LQR_obs() {
     /*  更新观测矩阵 */
     LQRXObsBuf[LEFT][0] = PI / 2 - leg[LEFT]->PendulumRadian - ins.pitch * DEGREE_2_RAD;
     LQRXObsBuf[LEFT][1] = -leg[LEFT]->d_phi0 - ins.gyro[1] * DEGREE_2_RAD;
-//    LQRXObsBuf[LEFT][1] = (LQRXObsBuf[LEFT][0] - last_theta[LEFT]) * 1000.f / chassis_dt;
-    // TODO:直接使用编码器角度
-//    LQRXObsBuf[LEFT][2] += obs_data.motor_v_left * chassis_dt / 1000.f;
-//    LQRXObsBuf[LEFT][3] = obs_data.motor_v_left;
-    LQRXObsBuf[LEFT][2] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS;
+    LQRXObsBuf[LEFT][2] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS - pos_x_offset[LEFT];
     LQRXObsBuf[LEFT][3] = lk_motor[LEFT]->measure.speed_rads * WHEEL_RADIUS;
     LQRXObsBuf[LEFT][4] = ins.pitch * DEGREE_2_RAD/* + 0.064*/;
     LQRXObsBuf[LEFT][5] = ins.gyro[1] * DEGREE_2_RAD;
 
     LQRXObsBuf[RIGHT][0] = PI / 2 - leg[RIGHT]->PendulumRadian - ins.pitch * DEGREE_2_RAD;;
     LQRXObsBuf[RIGHT][1] = -leg[RIGHT]->d_phi0 - ins.gyro[1] * DEGREE_2_RAD;
-    LQRXObsBuf[RIGHT][2] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS;
+    LQRXObsBuf[RIGHT][2] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS - pos_x_offset[RIGHT];
     LQRXObsBuf[RIGHT][3] = lk_motor[RIGHT]->measure.speed_rads * WHEEL_RADIUS;
     LQRXObsBuf[RIGHT][4] = ins.pitch * DEGREE_2_RAD;
     LQRXObsBuf[RIGHT][5] = ins.gyro[1] * DEGREE_2_RAD;
+
+    //计算位置目标
+    //  TODO：目前位移项error一直为0，并没有有效利用，需要完善
+/*    LQRXRefBuf[LEFT][2] += chassis_cmd.vx * 0.001f * 0.001f;  // cmd更新频率为1ms,单位为米
+    LQRXRefBuf[RIGHT][2] += chassis_cmd.vx * 0.001f * 0.001f;  // cmd更新频率为1ms,单位为米*/
+    LQRXRefBuf[LEFT][2] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS;
+    LQRXRefBuf[RIGHT][2] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS;
+    // 期望线速度
+/*    LQRXRefBuf[LEFT][3]  = vx_change_limit((chassis_cmd.vx/1000), LQRXObsBuf[LEFT][3]) +yaw_pid->Output;   // 米每秒
+    LQRXRefBuf[RIGHT][3] = vx_change_limit((chassis_cmd.vx/1000), LQRXObsBuf[RIGHT][3]) -yaw_pid->Output;  // 米每秒*/
+    LQRXRefBuf[LEFT][3]  = (chassis_cmd.vx/1000) +yaw_pid->Output;   // 米每秒
+    LQRXRefBuf[RIGHT][3] = (chassis_cmd.vx/1000) -yaw_pid->Output;  // 米每秒
+
+    //更新航向角期望
+    yaw_target += chassis_cmd.vw * 0.001f; // cmd更新频率为1ms,单位为度
 }
 
 void chassis_task_init(void)
@@ -200,6 +226,11 @@ void chassis_control_task(void)
         /* 保持腿长，便于倒地自起 */
         leg[LEFT]->length_ref = /*leg[LEFT]->PendulumLength*/0.1;
         leg[RIGHT]->length_ref = /*leg[RIGHT]->PendulumLength*/0.1;
+        /* 倒地自起后重置yaw期望和x位移的offset */
+        yaw_target = ins.yaw_total_angle;
+        pos_x_offset[LEFT] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS;
+        pos_x_offset[RIGHT] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS;
+        //TODO: 处于该模式下，应该屏蔽遥控器等控制
         break;
     case CHASSIS_FOLLOW_GIMBAL:
         // motor_enable();
@@ -212,13 +243,21 @@ void chassis_control_task(void)
         /* 更改腿长 */
         leg[LEFT]->length_ref = LEN_LOW;
         leg[RIGHT]->length_ref = LEN_LOW;
+        /* 切换对应的 K 矩阵 */
         MatLQRNegK.pData = (float*)LQR_k[0];
         break;
     case CHASSIS_STAND_MID:
         motor_enable();
-        leg[LEFT]->length_ref = LEN_MID;
-        leg[RIGHT]->length_ref = LEN_MID;
-        MatLQRNegK.pData = (float*)LQR_k[1];
+        leg[LEFT]->length_ref = LEN_HIG;
+        leg[RIGHT]->length_ref = LEN_HIG;
+        MatLQRNegK.pData = (float*)LQR_k[2];
+        break;
+    case CHASSIS_STAND_HIG:
+        //TODO: 添加对应的遥控切换键位
+        motor_enable();
+        leg[LEFT]->length_ref = LEN_HIG;
+        leg[RIGHT]->length_ref = LEN_HIG;
+        MatLQRNegK.pData = (float*)LQR_k[2];
         break;
     case CHASSIS_STOP:
         ht_motor_disable_all();
@@ -233,8 +272,7 @@ void chassis_control_task(void)
         break;
     }
 
-    leg_calc();
-
+    leg_calc(); // 保证稳定的运算频率，不受模式影响
     chassis_fdb_data.lk_l = lk_motor[LEFT]->measure;
     chassis_fdb_data.lk_r = lk_motor[RIGHT]->measure;
     /* 更新发布该线程的msg */
@@ -461,8 +499,6 @@ static int16_t lk_control_l(lk_motor_measure_t measure){
         set = (int16_t)(LQROutBuf[LEFT][0] * LK_TOR_TO_CUR);
     }
 #endif
-//    set = 0;
-
     return set;
 }
 
@@ -480,8 +516,6 @@ static int16_t lk_control_r(lk_motor_measure_t measure){
         set = (int16_t)(LQROutBuf[RIGHT][0] * LK_TOR_TO_CUR);
     }
 #endif
-//    set = 0;
-
     return set;
 }
 
@@ -537,8 +571,15 @@ static int chassis_motor_init(void)
     length_pid[RIGHT] = pid_register(&length_pid_config);
 
     // TODO: 两腿协调 PD 控制，航向角控制，横滚角补偿控制
+    /* 两腿协调 PD 控制 */
     pid_config_t theta_pid_config = INIT_PID_CONFIG(15, 0, 0.2, 0, 2, PID_Integral_Limit);
     theta_pid = pid_register(&theta_pid_config);
+    /* 航向角 PD 控制 */
+    pid_config_t yaw_pid_config = INIT_PID_CONFIG(0.25, 0, 0.01, 0, 2, PID_Integral_Limit);
+    yaw_pid = pid_register(&yaw_pid_config);
+    /* 横滚角 PD 控制 */
+    pid_config_t roll_pid_config = INIT_PID_CONFIG(0.1, 0, 0.2, 0, 2, PID_Integral_Limit);
+    roll_pid = pid_register(&roll_pid_config);
 
     return 0;
 }
@@ -631,6 +672,8 @@ static void leg_calc()
     LQR_cal();
     /* 双腿角度协调控制 */
     pid_calculate(theta_pid, leg[LEFT]->PendulumRadian - leg[RIGHT]->PendulumRadian, 0);
+    /* 航向角控制 */
+    pid_calculate(yaw_pid, ins.yaw_total_angle, yaw_target);
 
     len_pid_out = /*74 +*/ pid_calculate(length_pid[LEFT], leg[LEFT]->PendulumLength, leg[LEFT]->length_ref);
     LIMIT_MIN_MAX(len_pid_out, -300, 300);
@@ -646,7 +689,36 @@ static void leg_calc()
     leg[RIGHT]->VMC_cal(leg[RIGHT], ft_r, vmc_out_r);
 }
 #endif /* BSP_CHASSIS_MECANUM_MODE */
- 
+
+/**
+ * @brief  根据当前腿长限幅加速度,添加斜坡
+ * @param  vx_cmd: 期望速度
+ * @param  vx_now: 当前速度
+ */
+static float vx_change_limit(float vx_cmd, float vx_now)
+{
+    //根据当前腿长计算速度斜坡步长(腿越短越稳定，加减速斜率越大)
+    float legLength = (leg[LEFT]->PendulumLength + leg[RIGHT]->PendulumLength) / 2;
+    float speed_step = legLength * (-2.5) + 1;
+    float vx_change = vx_cmd - vx_now;
+    float vx_limited; // 限制后的速度,返回值
+
+    //计算速度斜坡，斜坡值更新到target.speed
+    if(fabsf(vx_change) < fabsf(speed_step))
+    {
+        vx_limited = vx_cmd;
+    }
+    else
+    {
+        if(vx_change > 0)
+            vx_limited = vx_now + speed_step;
+        else
+            vx_limited = vx_now - speed_step;
+    }
+
+    return vx_limited;
+}
+
 /**
  * @brief chassis 线程中所有订阅者初始化
  */
