@@ -10,6 +10,7 @@
 #include "robot.h"
 
 //#define CLOSE_ALL_MOTOR
+//#define SLIP_DETECTION // 是否使能打滑检测
 /* -------------------------------- 线程间通讯话题相关 ------------------------------- */
 // 订阅
 MCN_DECLARE(ins_topic);
@@ -165,6 +166,87 @@ static void LQR_cal()
 
 static pid_obj_t *length_pid[2];
 
+/* ------------------------------- 打滑检测卡尔曼滤波部分 ------------------------------ */
+//TODO:后续考虑移入观测线程，建立整车观测器
+static KalmanFilter_t chassis_kf[2];
+static float *observe_data[2]; // 卡尔曼输出矩阵的地址
+static float observe_vx[2], observe_ax; // 观测后得到的数据
+
+/**
+*   |    vx     |
+*   |   dvx     |
+*/
+static void chassis_kf_init(void)
+{
+    static float P_Init[4] =
+        {
+            10, 0,
+            0, 30
+        };
+    static float F_Init[4] =
+        {
+            1, 0.001,
+            0, 1
+        };
+    static float Q_Init[4] =
+        {
+            1, 0,
+            0, 1,
+        };
+
+    // 设置最小方差
+    static float state_min_variance[2] = {0.005, 0.1};
+
+    // 开启自动调整
+    chassis_kf[LEFT].UseAutoAdjustment = 1;
+
+    // 电机编码器测得速度，加速度计测得x轴运动加速度
+    static uint8_t measurement_reference[2] = {1,2};
+
+    static float measurement_degree[2] = {1,1};
+    // 根据measurement_reference与measurement_degree生成H矩阵如下（在当前周期全部测量数据有效情况下）
+
+    static float mat_R_diagonal_elements[2] = {800000,2000}; // 方差即为影响置信度，方差越大置信度越低  /* 打滑检测：800000 1000 */1
+    //根据mat_R_diagonal_elements生成R矩阵如下（在当前周期全部测量数据有效情况下）
+
+    Kalman_Filter_Init(&chassis_kf[LEFT], 2, 0, 2);
+
+    // 设置矩阵值
+    memcpy(chassis_kf[LEFT].P_data, P_Init, sizeof(P_Init));
+    memcpy(chassis_kf[LEFT].F_data, F_Init, sizeof(F_Init));
+    memcpy(chassis_kf[LEFT].Q_data, Q_Init, sizeof(Q_Init));
+    memcpy(chassis_kf[LEFT].MeasurementMap, measurement_reference, sizeof(measurement_reference));
+    memcpy(chassis_kf[LEFT].MeasurementDegree, measurement_degree, sizeof(measurement_degree));
+    memcpy(chassis_kf[LEFT].MatR_DiagonalElements, mat_R_diagonal_elements, sizeof(mat_R_diagonal_elements));
+    memcpy(chassis_kf[LEFT].StateMinVariance, state_min_variance, sizeof(state_min_variance));
+
+    chassis_kf[RIGHT].UseAutoAdjustment = 1;
+    Kalman_Filter_Init(&chassis_kf[RIGHT], 2, 0, 2);
+
+    // 设置矩阵值
+    memcpy(chassis_kf[RIGHT].P_data, P_Init, sizeof(P_Init));
+    memcpy(chassis_kf[RIGHT].F_data, F_Init, sizeof(F_Init));
+    memcpy(chassis_kf[RIGHT].Q_data, Q_Init, sizeof(Q_Init));
+    memcpy(chassis_kf[RIGHT].MeasurementMap, measurement_reference, sizeof(measurement_reference));
+    memcpy(chassis_kf[RIGHT].MeasurementDegree, measurement_degree, sizeof(measurement_degree));
+    memcpy(chassis_kf[RIGHT].MatR_DiagonalElements, mat_R_diagonal_elements, sizeof(mat_R_diagonal_elements));
+    memcpy(chassis_kf[RIGHT].StateMinVariance, state_min_variance, sizeof(state_min_variance));
+}
+
+static void chassis_kf_update(void)
+{
+    chassis_kf[LEFT].MeasuredVector[0] = lk_motor[LEFT]->measure.speed_rads * WHEEL_RADIUS + leg[LEFT]->d_l0 - ins.gyro[2] * 0.25f;
+    chassis_kf[LEFT].MeasuredVector[1] = ins.motion_accel_b[0];
+    observe_data[LEFT] = Kalman_Filter_Update(&chassis_kf[LEFT]);
+    observe_vx[LEFT] = *observe_data[LEFT];
+//    observe_ax = *(observe_data + 1);
+
+    chassis_kf[RIGHT].MeasuredVector[0] = lk_motor[RIGHT]->measure.speed_rads * WHEEL_RADIUS + leg[RIGHT]->d_l0 + ins.gyro[2] * 0.25f;
+    chassis_kf[RIGHT].MeasuredVector[1] = ins.motion_accel_b[0];
+    observe_data[RIGHT] = Kalman_Filter_Update(&chassis_kf[RIGHT]);
+    observe_vx[RIGHT] = *observe_data[RIGHT];
+}
+
 /* --------------------------------- 底盘运动学解算 --------------------------------- */
 /* 根据宏定义选择的底盘类型使能对应的解算函数 */
 #ifdef BSP_CHASSIS_OMNI_MODE
@@ -189,14 +271,22 @@ static void update_LQR_obs() {
     LQRXObsBuf[LEFT][0] = PI / 2 - leg[LEFT]->PendulumRadian - ins.pitch * DEGREE_2_RAD;
     LQRXObsBuf[LEFT][1] = -leg[LEFT]->d_phi0 - ins.gyro[1] * DEGREE_2_RAD;
     LQRXObsBuf[LEFT][2] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS - pos_x_offset[LEFT];
+#ifdef SLIP_DETECTION
+    LQRXObsBuf[LEFT][3] = observe_vx[LEFT];
+#else
     LQRXObsBuf[LEFT][3] = lk_motor[LEFT]->measure.speed_rads * WHEEL_RADIUS;
+#endif /*SLIP_DETECTION*/
     LQRXObsBuf[LEFT][4] = ins.pitch * DEGREE_2_RAD/* + 0.064*/;
     LQRXObsBuf[LEFT][5] = ins.gyro[1] * DEGREE_2_RAD;
 
     LQRXObsBuf[RIGHT][0] = PI / 2 - leg[RIGHT]->PendulumRadian - ins.pitch * DEGREE_2_RAD;;
     LQRXObsBuf[RIGHT][1] = -leg[RIGHT]->d_phi0 - ins.gyro[1] * DEGREE_2_RAD;
     LQRXObsBuf[RIGHT][2] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS - pos_x_offset[RIGHT];
+#ifdef SLIP_DETECTION
+    LQRXObsBuf[RIGHT][3] = observe_vx[RIGHT];
+#else
     LQRXObsBuf[RIGHT][3] = lk_motor[RIGHT]->measure.speed_rads * WHEEL_RADIUS;
+#endif /*SLIP_DETECTION*/
     LQRXObsBuf[RIGHT][4] = ins.pitch * DEGREE_2_RAD;
     LQRXObsBuf[RIGHT][5] = ins.gyro[1] * DEGREE_2_RAD;
 
@@ -220,6 +310,9 @@ void chassis_task_init(void)
 {
     chassis_sub_init();
     chassis_motor_init();
+#ifdef SLIP_DETECTION
+    chassis_kf_init();
+#endif /* SLIP_DETECTION */
 }
 
 /**
@@ -294,6 +387,9 @@ void chassis_control_task(void)
         break;
     }
 
+#ifdef SLIP_DETECTION
+    chassis_kf_update();
+#endif /*SLIP_DETECTION*/
     leg_calc(); // 保证稳定的运算频率，不受模式影响
     chassis_fdb_data.lk_l = lk_motor[LEFT]->measure;
     chassis_fdb_data.lk_r = lk_motor[RIGHT]->measure;
