@@ -20,18 +20,22 @@
 #include "motor_task.h"
 #include "cmd_task.h"
 #include "chassis_task.h"
+#include "trans_task.h"
 
 /* ---------------------------------- 线程相关 ---------------------------------- */
 osThreadId insTaskHandle;
 osThreadId robotTaskHandle;
 osThreadId motorTaskHandle;
+osThreadId transTaskHandle;
 
 void ins_task_entry(void const *argument);
 void motor_task_entry(void const *argument);
 void robot_task_entry(void const *argument);
+void trans_task_entry(void const *argument);
 
 static float motor_dt;
 static float robot_dt;
+static float trans_dt;
 
 /**
  * @brief 初始化机器人任务,所有持续运行的任务都在这里初始化
@@ -47,6 +51,9 @@ void OS_task_init()
 
     osThreadDef(robottask, robot_task_entry, osPriorityNormal, 0, 2048);
     robotTaskHandle = osThreadCreate(osThread(robottask), NULL);
+
+    osThreadDef(transtask, trans_task_entry, osPriorityNormal, 0, 1024);
+    transTaskHandle = osThreadCreate(osThread(transtask), NULL);
 }
 
 __attribute__((noreturn)) void motor_task_entry(void const *argument)
@@ -87,6 +94,26 @@ __attribute__((noreturn)) void robot_task_entry(void const *argument)
         chassis_control_task();
 
         vTaskDelayUntil(&robot_wake_time, 1);  // 平衡步兵需要1khz
+    }
+}
+
+ __attribute__((noreturn)) void trans_task_entry(void const *argument)
+{
+    float trans_start = dwt_get_time_ms();
+    PrintLog("[freeRTOS] Trans Task Start\n");
+    uint32_t trans_wake_time = osKernelSysTick();
+    for (;;)
+    {
+/* ------------------------------ 调试监测线程调度 ------------------------------ */
+        trans_dt = dwt_get_time_ms() - trans_start;
+        trans_start = dwt_get_time_ms();
+        if (trans_dt > 1.5)
+             PrintLog("[freeRTOS] Trans Task is being DELAY! dt = [%f]\n", &trans_dt);
+/* ------------------------------ 调试监测线程调度 ------------------------------ */
+
+        trans_control_task();
+
+        vTaskDelayUntil(&trans_wake_time, 1);
     }
 }
 

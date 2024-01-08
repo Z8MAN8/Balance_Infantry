@@ -44,7 +44,7 @@ static void chassis_sub_pull(void);
 #define HT_OFFSET_RF  0.44445f  // 右上电机 0.3366
 #define HT_OFFSET_LB  0.44154f  // 左下电机 0.3221
 #define HT_OFFSET_RB -0.45280f  // 右下电机 -0.3366
-#define ROLL_OFFSET   1.86f     // TODO：目前C板陀螺仪安装误差，后续可能变化
+#define ROLL_OFFSET  -0.28f     // TODO：目前C板陀螺仪安装误差，后续可能变化
 #define LEG_LENGHT_F  15.0f     // TODO: 腿长控制前馈，根据机体质量调整
 #define LEG_MASS      0.824f    // 腿部质量
 /*跳跃相关*/

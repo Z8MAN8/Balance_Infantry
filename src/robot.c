@@ -12,6 +12,7 @@
 MCN_DEFINE(chassis_cmd, sizeof(struct chassis_cmd_msg));
 MCN_DEFINE(chassis_fdb, sizeof(struct chassis_fdb_msg));
 MCN_DEFINE(ins_topic, sizeof(struct ins_msg));
+MCN_DEFINE(trans_fdb,sizeof(struct trans_fdb_msg));
 
 static void mcn_topic_init(void);
 
@@ -31,6 +32,7 @@ void robot_init()
     motor_task_init();
     cmd_task_init();
     chassis_task_init();
+    trans_task_init();
 
     // 初始化完成,开启中断
     __enable_irq();
@@ -45,4 +47,5 @@ static void mcn_topic_init(void)
     mcn_advertise(MCN_HUB(ins_topic), NULL);
     mcn_advertise(MCN_HUB(chassis_cmd), NULL);
     mcn_advertise(MCN_HUB(chassis_fdb), NULL);
+    mcn_advertise(MCN_HUB(trans_fdb), NULL);
 }

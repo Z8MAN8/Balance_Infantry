@@ -61,4 +61,14 @@ struct chassis_fdb_msg
     bool touch_ground;         // 是否触地
 };
 
+/* ------------------------------ trans解析自瞄数据 ------------------------------ */
+/**
+ * @brief 上位机自瞄数据,由trans发布
+ */
+struct trans_fdb_msg
+{
+   float yaw;
+   float pitch;
+};
+
 #endif
