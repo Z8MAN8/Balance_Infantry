@@ -55,8 +55,18 @@ typedef struct leg_obj
 	float length_ref;
     /*倒立摆长度速度*/
     float d_l0;
+    /*上一次倒立摆长度速度*/
+    float last_dl0;
+    /*倒立摆长度加速度*/
+    float dd_l0;
     /*倒立摆角度速度*/
     float d_phi0;
+    /* 受到地面的支持力（用于离地检测） */
+    float support_force;
+    /* 接触地面状态量 */
+    uint8_t touch_ground;
+    /* 一段时间未接触地面，进入离地状态（离地飞行） */
+    uint8_t fly_flag;
 
 	void (*resolve)(struct leg_obj *leg);
     /* 求得腿部运动速度 [dl0; dphi0] */

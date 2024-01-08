@@ -61,6 +61,7 @@ static void _leg_resolve_pos(leg_obj_t *leg)
  */
 static void _get_leg_spd(struct leg_obj *leg, float d_phi4, float d_phi1)
 {
+    const float lpfRatio = 0.5f; //低通滤波系数(新值的权重)
     float phi1 = leg->phi1;
     float phi4 = leg->phi4;
     float b_out_tmp;
@@ -144,6 +145,8 @@ static void _get_leg_spd(struct leg_obj *leg, float d_phi4, float d_phi1)
     t53 = t21 * (1.0F / t60);
     t59 = t10_tmp - t59 * t47 * 0.21F;
     t28 = t12_tmp - t2 * t47 * 0.21F;
+
+    leg->last_dl0 = leg->d_l0;
     leg->d_l0 =
             d_phi4 * t48 * (t21 * t23 * 0.42F - (out_tmp - 0.03F) * t4 * 0.42F) /
             2.0F +
@@ -151,6 +154,7 @@ static void _get_leg_spd(struct leg_obj *leg, float d_phi4, float d_phi1)
     leg->d_phi0 =
             d_phi4 * t60 * t52 * (t61 * (0.0F - t23 * 0.21F) + t53 * (t4 * 0.21F)) -
             d_phi1 * t60 * t52 * (t61 * t59 - t53 * t28);
+    leg->dd_l0 = ((leg->d_l0 - leg->last_dl0) * 1000) * lpfRatio + leg->dd_l0 * (1 - lpfRatio);  // 用于计算离地检测
 }
 
 static int8_t _input_leg_angle(leg_obj_t *leg, float phi4, float phi1)

@@ -23,6 +23,7 @@ typedef enum
     CHASSIS_STAND_MID,     //底盘站立中姿态
     CHASSIS_STAND_HIG,     //底盘站立高姿态
     CHASSIS_OFF_GROUND,    //底盘离地
+    CHASSIS_JUMP,          //底盘跳跃模式
     CHASSIS_FOLLOW_GIMBAL, //底盘跟随云台
     CHASSIS_SPIN,          //底盘陀螺模式
     CHASSIS_FLY,           //底盘飞坡模式

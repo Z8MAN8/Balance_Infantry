@@ -58,6 +58,7 @@ struct chassis_fdb_msg
     /*  底盘任务使用到的电机句柄,仅能对其 measure 成员当作传感器数据读取，禁止改写 */
     lk_motor_measure_t lk_l;   // 左轮毂电机
     lk_motor_measure_t lk_r;   // 右轮毂电机
+    bool touch_ground;         // 是否触地
 };
 
 #endif

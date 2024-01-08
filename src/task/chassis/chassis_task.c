@@ -43,14 +43,21 @@ static void chassis_sub_pull(void);
 #define HT_OFFSET_RF  0.44445f  // 右上电机 0.3366
 #define HT_OFFSET_LB  0.44154f  // 左下电机 0.3221
 #define HT_OFFSET_RB -0.45280f  // 右下电机 -0.3366
+#define ROLL_OFFSET   1.86f     // TODO：目前C板陀螺仪安装误差，后续可能变化
+#define LEG_LENGHT_F  15.0f     // TODO: 腿长控制前馈，根据机体质量调整
+#define LEG_MASS      0.824f    // 腿部质量
+/*跳跃相关*/
+#define JUMP_TORQUE_PRESS    30.0f   // 跳跃时下压扭矩，正负需对应各电机确定
+#define JUMP_TORQUE_SHRINK   22.0f   // 跳跃时回缩扭矩，正负需对应各电机确定
 /* 髋关节电机扭矩限制 */
-#define HT_OUTPUT_LIMIT 10.0f
-#define HT_INIT_OUT 1.0f   // 电机初始化时的输出扭矩,确保能撞到限位
-#define LK_OUTPUT_LIMIT 3.0f
+#define HT_OUTPUT_LIMIT 20.0f
+#define HT_INIT_OUT 2.0f   // 电机初始化时的输出扭矩,确保能撞到限位
+#define LK_OUTPUT_LIMIT 4.5f
 #define LK_TOR_TO_CUR 406.21344  // LK9025 扭矩转换电流系数
 /* 整体运动限制 */
 #define POSITION_X_LIMIT 0.5f  // LQR控制时的位移限制 m
 #define VELOCITY_X_LIMIT 4.0f  // LQR控制时的位移速度限制 m/s
+/* 当前lk9025使用多电机模式控制 */
 
 static pid_obj_t *follow_pid; // 用于底盘跟随云台计算vw
 static pid_obj_t *theta_pid;  // 双腿角度协调控制
@@ -72,6 +79,13 @@ static leg_obj_t *leg[2] = {NULL};
 static float ft_l[2], ft_r[2];  // FT = [PendulumForce PendulumTorque]
 static float vmc_out_l[2];  // vmc计算得出的扭矩值 左边腿
 static float vmc_out_r[2];  // vmc计算得出的扭矩值 右边腿
+static float jump_out_l[2]; // 跳跃附加扭矩值 左边腿
+static float jump_out_r[2]; // 跳跃附加扭矩值 右边腿
+static float jump_start_time;  // 跳跃开始时间
+static float jump_dt_time;     // 起跳后的间隔时间
+static float is_jumping;       // 跳跃标志位
+static float jump_flag;        // 切入跳跃模式只跳一次
+static float support_force[2];  //左右腿的地面支持力 用于离地检测
 static float length_ref = 0.16f;
 static float angle_ref = /*1.57f*/1.57f;
 
@@ -100,17 +114,17 @@ static void motor_relax();
 /*static float LQR_k[3][12]=
         {
                 //Order: K00 K01 K02 K03 K04 K05 K10 K11 K12 K13 K14 K15
-                {-10.8493,  -0.9343,  -1.2190,  -1.7940,   7.3875,   0.9810,   16.1106,   1.1238,   2.3949,   3.2798,  15.0915,   0.9895},	//K BOT 160
-                {-14.0165,  -1.4406,  -1.3401,  -1.9953,   5.8883,   0.8523,   15.8110,   1.1699,   1.6610,   2.2880,  18.7949,   1.4551},	//K MID 240
-                {-16.2276,  -1.9088,  -1.3897,  -2.0973,   4.8373,   0.7551,   15.0941,   1.1371,   1.2084,   1.6726,  20.6109,   1.6993},	//K TOP 320
-        };  //1000hz*/
-static float LQR_k[3][12]=
-        {
-                //Order: K00 K01 K02 K03 K04 K05 K10 K11 K12 K13 K14 K15
                 {-10.3992,  -0.9331,  -0.4549,  -1.7546,   7.2587,   0.9680,   15.3052,   1.1763,   0.9337,   3.4995,  13.9384,   0.9096},	//K BOT 160
                 {-13.7472,  -1.4827,  -0.5207,  -2.0187,   5.9456,   0.8669,   15.6191,   1.2992,   0.6813,   2.5643,  17.3396,   1.3307},	//K MID 240
                 {-16.1640,  -2.0019,  -0.5512,  -2.1502,   4.9823,   0.7846,   15.2672,   1.3208,   0.5151,   1.9467,  19.1084,   1.56559},	//K TOP 320
-        }; // 700hz Q=diag([100 1 100 1000 5000 1]) R=[240 0;0 25]
+        }; // 700hz Q=diag([100 1 100 1000 5000 1]) R=[240 0;0 25]*/
+static float LQR_k[3][12]=
+        {
+                //Order: K00 K01 K02 K03 K04 K05 K10 K11 K12 K13 K14 K15
+                {-10.6825,  -0.9177,  -1.1850,  -1.7416,   7.3019,   0.9677,   15.6096,   1.0837,   2.3166,   3.1649,  15.0278,   1.0024},	//K BOT 160
+                {-13.8348,  -1.4194,  -1.3110,  -1.9504,   5.8304,   0.8424,   15.4082,   1.1319,   1.6091,   2.2124,  18.6314,   1.4545},	//K MID 240
+                {-16.0400,  -1.8837,  -1.3636,  -2.0567,   4.7952,   0.7471,   14.7615,   1.1021,   1.1713,   1.6184,  20.4058,   1.6923},	//K TOP 320
+        }; // Ts=1.424ms Q=diag([1 1 500 100 5000 1]) R=[240 0;0 25]
 
 /* [T Tp(髋)] */
 static float LQROutBuf[2][2]={0};
@@ -162,6 +176,10 @@ void mecanum_calc(struct chassis_cmd_msg *cmd, int16_t* out_speed);
 void (*chassis_calc_moto_speed)(struct chassis_cmd_msg *cmd, int16_t* out_speed) = mecanum_calc;
 #endif /* BSP_CHASSIS_MECANUM_MODE */
 static void absolute_cal(struct chassis_cmd_msg *cmd, float angle);
+/**
+ * @brief 底盘跳跃处理
+ */
+static void jumping_control(void);
 
 /* --------------------------------- 底盘线程入口 --------------------------------- */
 static float chassis_dt;
@@ -186,8 +204,8 @@ static void update_LQR_obs() {
     //  TODO：目前位移项error一直为0，并没有有效利用，需要完善
 /*    LQRXRefBuf[LEFT][2] += chassis_cmd.vx * 0.001f * 0.001f;  // cmd更新频率为1ms,单位为米
     LQRXRefBuf[RIGHT][2] += chassis_cmd.vx * 0.001f * 0.001f;  // cmd更新频率为1ms,单位为米*/
-    LQRXRefBuf[LEFT][2] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS;
-    LQRXRefBuf[RIGHT][2] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS;
+    LQRXRefBuf[LEFT][2] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS - pos_x_offset[LEFT];
+    LQRXRefBuf[RIGHT][2] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS - pos_x_offset[RIGHT];
     // 期望线速度
 /*    LQRXRefBuf[LEFT][3]  = vx_change_limit((chassis_cmd.vx/1000), LQRXObsBuf[LEFT][3]) +yaw_pid->Output;   // 米每秒
     LQRXRefBuf[RIGHT][3] = vx_change_limit((chassis_cmd.vx/1000), LQRXObsBuf[RIGHT][3]) -yaw_pid->Output;  // 米每秒*/
@@ -248,9 +266,9 @@ void chassis_control_task(void)
         break;
     case CHASSIS_STAND_MID:
         motor_enable();
-        leg[LEFT]->length_ref = LEN_HIG;
-        leg[RIGHT]->length_ref = LEN_HIG;
-        MatLQRNegK.pData = (float*)LQR_k[2];
+        leg[LEFT]->length_ref = LEN_MID;
+        leg[RIGHT]->length_ref = LEN_MID;
+        MatLQRNegK.pData = (float*)LQR_k[1];
         break;
     case CHASSIS_STAND_HIG:
         //TODO: 添加对应的遥控切换键位
@@ -258,6 +276,10 @@ void chassis_control_task(void)
         leg[LEFT]->length_ref = LEN_HIG;
         leg[RIGHT]->length_ref = LEN_HIG;
         MatLQRNegK.pData = (float*)LQR_k[2];
+        break;
+    case CHASSIS_JUMP:
+        motor_enable();
+        jumping_control();
         break;
     case CHASSIS_STOP:
         ht_motor_disable_all();
@@ -337,7 +359,7 @@ static ht_motor_para_t ht_control_1(ht_motor_measure_t measure)
     }
     else
     {
-        send_t = vmc_out_l[FRONT];
+        send_t = vmc_out_l[FRONT] + jump_out_l[FRONT];
 #ifdef CLOSE_ALL_MOTOR
         send_t = 0;
 #endif
@@ -368,7 +390,7 @@ static ht_motor_para_t ht_control_2(ht_motor_measure_t measure)
     }
     else
     {
-        send_t = -vmc_out_r[FRONT];
+        send_t = -vmc_out_r[FRONT] + jump_out_r[FRONT];
 #ifdef CLOSE_ALL_MOTOR
         send_t = 0;
 #endif
@@ -399,7 +421,7 @@ static ht_motor_para_t ht_control_3(ht_motor_measure_t measure)
     }
     else
     {
-        send_t = -vmc_out_r[BACK];
+        send_t = -vmc_out_r[BACK] + jump_out_r[BACK];
 #ifdef CLOSE_ALL_MOTOR
         send_t = 0;
 #endif
@@ -430,7 +452,7 @@ static ht_motor_para_t ht_control_4(ht_motor_measure_t measure)
     }
     else
     {
-        send_t = vmc_out_l[BACK];
+        send_t = vmc_out_l[BACK] + jump_out_l[BACK];
 #ifdef CLOSE_ALL_MOTOR
         send_t = 0;
 #endif
@@ -566,7 +588,7 @@ static int chassis_motor_init(void)
     lk_motor_init();
 
     pid_config_t length_pid_config = INIT_PID_CONFIG(500, 0, 200, 0, 500,
-                                                   (PID_Integral_Limit));
+                                                   (PID_Integral_Limit | PID_DerivativeFilter));
     length_pid[LEFT] = pid_register(&length_pid_config);
     length_pid[RIGHT] = pid_register(&length_pid_config);
 
@@ -578,7 +600,7 @@ static int chassis_motor_init(void)
     pid_config_t yaw_pid_config = INIT_PID_CONFIG(0.25, 0, 0.01, 0, 2, PID_Integral_Limit);
     yaw_pid = pid_register(&yaw_pid_config);
     /* 横滚角 PD 控制 */
-    pid_config_t roll_pid_config = INIT_PID_CONFIG(0.1, 0, 0.2, 0, 2, PID_Integral_Limit);
+    pid_config_t roll_pid_config = INIT_PID_CONFIG(15, 0, 0.5, 0, 100, PID_Integral_Limit);
     roll_pid = pid_register(&roll_pid_config);
 
     return 0;
@@ -645,6 +667,7 @@ void mecanum_calc(struct chassis_cmd_msg *cmd, int16_t* out_speed)
 #endif /* BSP_CHASSIS_MECANUM_MODE */
 
 #ifdef BSP_CHASSIS_LEG_MODE
+static uint8_t isTouchingGround;
 /**
  * @brief 轮腿底盘运动解算
  *
@@ -658,35 +681,82 @@ static void leg_calc()
     leg[LEFT]->input_leg_angle(leg[LEFT], /*-0.42*/(ht_motor[LEFT_BACK]->measure.total_angle - HT_OFFSET_LB), /*3.6*/PI + (ht_motor[LEFT_FRONT]->measure.total_angle - HT_OFFSET_LF));
     leg[LEFT]->resolve(leg[LEFT]);
     leg[LEFT]->get_leg_spd(leg[LEFT], ht_motor[LEFT_FRONT]->measure.speed_rads, ht_motor[LEFT_BACK]->measure.speed_rads);
-/*    ft_l[0] = -pid_calculate(leg_controller[LEFT].length_pid, leg[LEFT]->PendulumLength, length_ref);
-    ft_l[1] = -pid_calculate(leg_controller[LEFT].angle_pid, leg[LEFT]->PendulumRadian, angle_ref);*/
 
     // 右腿解算
     leg[RIGHT]->input_leg_angle(leg[RIGHT], -(ht_motor[RIGHT_BACK]->measure.total_angle - HT_OFFSET_RB),  PI - (ht_motor[RIGHT_FRONT]->measure.total_angle - HT_OFFSET_RF));
     leg[RIGHT]->resolve(leg[RIGHT]);
     leg[RIGHT]->get_leg_spd(leg[RIGHT], -ht_motor[RIGHT_FRONT]->measure.speed_rads, -ht_motor[RIGHT_BACK]->measure.speed_rads);
-/*    ft_r[0] = -pid_calculate(leg_controller[RIGHT].length_pid, leg[RIGHT]->PendulumLength, length_ref);
-    ft_r[1] = -pid_calculate(leg_controller[RIGHT].angle_pid, leg[RIGHT]->PendulumRadian, angle_ref);*/
 
     update_LQR_obs();
     LQR_cal();
+
     /* 双腿角度协调控制 */
     pid_calculate(theta_pid, leg[LEFT]->PendulumRadian - leg[RIGHT]->PendulumRadian, 0);
     /* 航向角控制 */
     pid_calculate(yaw_pid, ins.yaw_total_angle, yaw_target);
+    /* 横滚角控制 */
+    pid_calculate(roll_pid, ins.roll, chassis_cmd.vy + ROLL_OFFSET);
 
-    len_pid_out = /*74 +*/ pid_calculate(length_pid[LEFT], leg[LEFT]->PendulumLength, leg[LEFT]->length_ref);
+    len_pid_out = pid_calculate(length_pid[LEFT], leg[LEFT]->PendulumLength, leg[LEFT]->length_ref);
     LIMIT_MIN_MAX(len_pid_out, -300, 300);
-    ft_l[0] = len_pid_out;
-    ft_l[1] = LQROutBuf[LEFT][1] + theta_pid->Output/*0.01*/;
+    //根据离地状态计算左右腿推力，若离地则不考虑roll轴PID输出和前馈量
+//    leftForce = legLengthPID.output + ((groundDetector.isTouchingGround && !groundDetector.isCuchioning) ? 6-rollPID.output : 0);
+    ft_l[0] = len_pid_out + roll_pid->Output + LEG_LENGHT_F;
+    ft_l[1] = LQROutBuf[LEFT][1] + theta_pid->Output;
 
-    len_pid_out = /*74 +*/ pid_calculate(length_pid[RIGHT], leg[RIGHT]->PendulumLength, leg[RIGHT]->length_ref);
+    len_pid_out = pid_calculate(length_pid[RIGHT], leg[RIGHT]->PendulumLength, leg[RIGHT]->length_ref);
     LIMIT_MIN_MAX(len_pid_out, -300, 300);
-    ft_r[0] = len_pid_out;
+    ft_r[0] = len_pid_out - roll_pid->Output + LEG_LENGHT_F;
     ft_r[1] = LQROutBuf[RIGHT][1] - theta_pid->Output;
+
+    /* 离地检测，计算两腿地面支持力 */
+//    TODO：目前离地检测还存在问题 ins.acc 存在问题，可能需要卡尔曼滤波
+    leg[LEFT]->support_force = ft_l[0] + LEG_MASS * 9.8f + LEG_MASS * (ins.motion_accel_b[2] - leg[LEFT]->dd_l0);
+    leg[RIGHT]->support_force = ft_r[0] + LEG_MASS * 9.8f + LEG_MASS * (ins.motion_accel_b[2] - leg[RIGHT]->dd_l0);
+    isTouchingGround = (leg[LEFT]->support_force < 15) && (leg[RIGHT]->support_force < 15); //判断当前瞬间是否接地
 
     leg[LEFT]->VMC_cal(leg[LEFT], ft_l, vmc_out_l);
     leg[RIGHT]->VMC_cal(leg[RIGHT], ft_r, vmc_out_r);
+}
+
+/**
+ * @brief 底盘跳跃处理
+ * @note 进入跳跃模式时记录当前时间，并将jump输出力矩加上跳跃下压力矩值，持续0.2s,开始跳跃0，15s后加上跳跃回缩力矩值，持续0.4s,落地后跳跃结束
+ */
+// TODO: 结合离地检测进行优化（进阶玩法：空中轮子充当动量轮调整姿态
+// TODO: 跳跃力矩和持续时间还需继续优化
+// TODO: 跳跃前需要增加机体pitch轴范围判断，或起跳前通过改写k矩阵，使得机体pitch轴更快收敛，充分准备起跳，减少空中发撒
+// TODO：目前通过多状态量判断跳跃是否结束，以及切入跳跃模式仅跳跃一次，需要进一步优化，可以结合cmd线程
+static void jumping_control(void)
+{
+    float current_time = dwt_get_time_ms();
+    float dt;
+    if(chassis_cmd.last_mode != CHASSIS_JUMP)
+    {
+        jump_flag = 1;
+    }
+
+    if(jump_flag)
+    {
+
+    if(!is_jumping)
+    {
+        is_jumping = 1;
+        jump_start_time = current_time;
+    }
+    dt = current_time - jump_start_time;
+
+    jump_out_l[FRONT] = -JUMP_TORQUE_PRESS * (dt<200) + JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
+    jump_out_l[BACK]  =  JUMP_TORQUE_PRESS * (dt<200) - JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
+    jump_out_r[FRONT] =  JUMP_TORQUE_PRESS * (dt<200) - JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
+    jump_out_r[BACK]  = -JUMP_TORQUE_PRESS * (dt<200) + JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
+
+    if (dt > 400)
+    {
+        is_jumping = 0;  // 跳跃结束
+        jump_flag = 0;  // 跳跃结束
+    }
+    }
 }
 #endif /* BSP_CHASSIS_MECANUM_MODE */
 
