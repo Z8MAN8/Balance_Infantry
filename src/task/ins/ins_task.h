@@ -40,11 +40,19 @@ typedef struct
     // IMU量测值
     float gyro[3];  // 角速度
     float accel[3]; // 加速度
+
+    float gyro_gim[3];  // 角速度
+    float accel_gim[3]; // 加速度
     // 位姿
     float roll;
     float pitch;
     float yaw;
     float yaw_total_angle;
+
+    float roll_gim;
+    float pitch_gim;
+    float yaw_gim;
+    float yaw_total_angle_gim;
 
     uint8_t init;
 } ins_t;
@@ -65,5 +73,6 @@ typedef struct
  * @brief 姿态解算任务主体，在主循环中被调用
  */
 __attribute__((noreturn)) void ins_task_entry(void const *argument);
+ int ins_rx_callback(uint32_t id, uint8_t *data);
 
 #endif // _INS_H
