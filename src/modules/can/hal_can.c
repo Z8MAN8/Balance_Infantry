@@ -10,6 +10,7 @@
 
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
+extern  int ins_rx_callback(uint32_t id, uint8_t *data);
 static CAN_TxHeaderTypeDef  tx_message;
 
 void CAN_send(CAN_HandleTypeDef *can, uint32_t send_id, uint8_t data[])
@@ -71,6 +72,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
             if(ht_motot_rx_callback(rx_header.StdId, rx_data) == 0)
                 return;
+//            if(bmi_rx_callback(rx_header.StdId, rx_data) == 0)
+//                return;
+            if(ins_rx_callback(rx_header.StdId, rx_data) == 0)
+                return;
         }
     }
 }
@@ -91,6 +96,10 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
                 return;
 
             if(lk_motot_rx_callback(rx_header.StdId, rx_data) == 0)
+                return;
+//            if(bmi_rx_callback(rx_header.StdId, rx_data) == 0)
+//                return;
+            if(ins_rx_callback(rx_header.StdId, rx_data) == 0)
                 return;
         }
     }

@@ -19,6 +19,10 @@ static uint8_t idx = 0; // register idx,是该文件的全局轮腿索引,在注
 /* DJI电机的实例,此处仅保存指针,内存的分配将通过电机实例初始化时通过malloc()进行 */
 static leg_obj_t leg_obj[2];
 
+/**
+ * @brief 求得摆角、摆长 [phi0; l0]
+ * @param leg 腿部实例句柄
+ */
 static void _leg_resolve_pos(leg_obj_t *leg)
 {
     float l1 = leg->l1;
@@ -36,6 +40,8 @@ static void _leg_resolve_pos(leg_obj_t *leg)
 
     leg->U2 = phi2;
 
+
+    //0为x轴坐标，1为y轴坐标
     /*计算B坐标*/
     leg->CoorB[0] = l1 * arm_cos_f32(leg->phi1)/* - leg->moto_distance_half*/;
     leg->CoorB[1] = l1 * arm_sin_f32(leg->phi1);
@@ -46,15 +52,18 @@ static void _leg_resolve_pos(leg_obj_t *leg)
     leg->CoorD[0] = l1 * arm_cos_f32(leg->phi4) + leg->moto_distance;
     leg->CoorD[1] = l1 * arm_sin_f32(leg->phi4);
     /*计算u3*/
+    //即u3=atan[(yc-yd)/(xc-xd)],即u3=phi3
     leg->U3 = atan2f((yb - yd) + l2 * arm_sin_f32(phi2), (xb - xd) + l2 * arm_cos_f32(phi2));
 
     /*输出摆长摆角*/
+    //摆角即phi0
     leg->PendulumRadian = atan2f(leg->CoorC[1],leg->CoorC[0] - leg->moto_distance_half);
+    //摆长即l0
     leg->PendulumLength = sqrtf((leg->CoorC[0] - leg->moto_distance_half)*(leg->CoorC[0] - leg->moto_distance_half) + leg->CoorC[1]*leg->CoorC[1]);
 }
 
 /**
- * @brief 求得腿部运动速度 [dl0; dphi0]
+ * @brief 求得腿部运动速度 [dl0; dphi0; ddl0]
  * @param leg 腿部实例句柄
  * @param d_phi4 phi4的角速度，单位为rad/s
  * @param d_phi1 phi1的角速度，单位为rad/s
@@ -111,7 +120,7 @@ static void _get_leg_spd(struct leg_obj *leg, float d_phi4, float d_phi1)
     t48 = t3 * t28 / 10.0F + t5 * (out_tmp + 0.06F) / 10.0F;
     t52 = 1.0F / ((b_out_tmp + 0.0126F) + t44);
     t53 = t52 * t52;
-    t59 = sqrtf((t32 * t32 + (b_out_tmp + 0.0126F) * (b_out_tmp + 0.0126F)) -
+    t59 = sqrtf  ((t32 * t32 + (b_out_tmp + 0.0126F) * (b_out_tmp + 0.0126F)) -
                 t44 * t44);
     t60 = 1.0F / t59;
     t61 = (t24 - t23) + t59;
@@ -172,6 +181,14 @@ static int8_t _input_leg_angle(leg_obj_t *leg, float phi4, float phi1)
     return (uint8_t)leg->leg_state;
 }
 
+
+
+/**
+ * @brief 解算得到对应腿前后两关节电机的输出力矩
+ * @param leg 轮腿实例指针
+ * @param FT  列向量 [PendulumForce PendulumTorque]，[沿腿的推力 沿五连杆中心轴的力矩]
+ * @param Tmotor vmc计算得出的扭矩值
+ */
 /*Leg motors*/
 /*FT = [PendulumForce PendulumTorque]   Torque = [Motor3Torque(backmotor)  Motor2Torque(frontmotor)] */
 static void _VMC_calculation(leg_obj_t *leg, float *FT, float *Tmotor)

@@ -45,15 +45,19 @@ static void chassis_sub_pull(void);
 #define HT_OFFSET_LB  0.44154f  // 左下电机 0.3221
 #define HT_OFFSET_RB -0.45280f  // 右下电机 -0.3366
 #define ROLL_OFFSET  -0.28f     // TODO：目前C板陀螺仪安装误差，后续可能变化
-#define LEG_LENGHT_F  15.0f     // TODO: 腿长控制前馈，根据机体质量调整
+//#define LEG_LENGHT_F  15.0f     // TODO: 腿长控制前馈，根据机体质量调整，加云台前数据
+#define LEG_LENGHT_F  20.0f     // TODO: 腿长控制前馈，根据机体质量调整
 #define LEG_MASS      0.824f    // 腿部质量
 /*跳跃相关*/
 #define JUMP_TORQUE_PRESS    30.0f   // 跳跃时下压扭矩，正负需对应各电机确定
 #define JUMP_TORQUE_SHRINK   22.0f   // 跳跃时回缩扭矩，正负需对应各电机确定
 /* 髋关节电机扭矩限制 */
-#define HT_OUTPUT_LIMIT 20.0f
+#define HT_OUTPUT_LIMIT 35.0f//当时最后用的
+//#define HT_OUTPUT_LIMIT 20.0f//加云台前
+//#define HT_OUTPUT_LIMIT 0//当时最后用的
 #define HT_INIT_OUT 2.0f   // 电机初始化时的输出扭矩,确保能撞到限位
 #define LK_OUTPUT_LIMIT 4.5f
+//#define LK_OUTPUT_LIMIT 0
 #define LK_TOR_TO_CUR 406.21344  // LK9025 扭矩转换电流系数
 /* 整体运动限制 */
 #define POSITION_X_LIMIT 0.5f  // LQR控制时的位移限制 m
@@ -77,7 +81,7 @@ static struct leg_controller_t{
 }leg_controller[2];
 
 static leg_obj_t *leg[2] = {NULL};
-static float ft_l[2], ft_r[2];  // FT = [PendulumForce PendulumTorque]
+static float ft_l[2], ft_r[2];  // FT = [PendulumForce PendulumTorque]，[沿腿的推力 沿五连杆中心轴的力矩]
 static float vmc_out_l[2];  // vmc计算得出的扭矩值 左边腿
 static float vmc_out_r[2];  // vmc计算得出的扭矩值 右边腿
 static float jump_out_l[2]; // 跳跃附加扭矩值 左边腿
@@ -119,13 +123,25 @@ static void motor_relax();
                 {-13.7472,  -1.4827,  -0.5207,  -2.0187,   5.9456,   0.8669,   15.6191,   1.2992,   0.6813,   2.5643,  17.3396,   1.3307},	//K MID 240
                 {-16.1640,  -2.0019,  -0.5512,  -2.1502,   4.9823,   0.7846,   15.2672,   1.3208,   0.5151,   1.9467,  19.1084,   1.56559},	//K TOP 320
         }; // 700hz Q=diag([100 1 100 1000 5000 1]) R=[240 0;0 25]*/
+//static float LQR_k[3][12]=
+//        {
+//                {-13.5435,  -0.9888,  -1.0915,  -1.7668,   8.2780,   1.1123,   22.4086,   1.4836,   2.6957,   4.0920,  14.7195,   1.1273},	//K BOT 160
+//                {-17.8858,  -1.5890,  -1.2950,  -2.1111,   6.7203,   0.9709,   22.3946,   1.6363,   1.9748,   3.0152,  19.5775,   1.7395},	//K MID 240
+//                {-20.6655,  -2.1190,  -1.3653,  -2.2479,   5.5022,   0.8466,   21.0502,   1.6104,   1.4511,   2.2234,  21.9892,   2.0712},	//K TOP 320
+//        }; // Ts=1.424ms Q=diag([1 1 500 100 5000 1]) R=[240 0;0 25]
 static float LQR_k[3][12]=
         {
-                //Order: K00 K01 K02 K03 K04 K05 K10 K11 K12 K13 K14 K15
-                {-10.6825,  -0.9177,  -1.1850,  -1.7416,   7.3019,   0.9677,   15.6096,   1.0837,   2.3166,   3.1649,  15.0278,   1.0024},	//K BOT 160
-                {-13.8348,  -1.4194,  -1.3110,  -1.9504,   5.8304,   0.8424,   15.4082,   1.1319,   1.6091,   2.2124,  18.6314,   1.4545},	//K MID 240
-                {-16.0400,  -1.8837,  -1.3636,  -2.0567,   4.7952,   0.7471,   14.7615,   1.1021,   1.1713,   1.6184,  20.4058,   1.6923},	//K TOP 320
-        }; // Ts=1.424ms Q=diag([1 1 500 100 5000 1]) R=[240 0;0 25]
+                {-14.8670,   -1.0361,   -1.1047,   -1.8466,    8.7726,    1.1942,   25.5826,    1.6609,    2.8783,    4.5272,   14.7643,    1.1838},	//K BOT 160
+                {-19.3345,   -1.6403,   -1.2814,   -2.1545,    7.0545,    1.0217,   24.8938,    1.7897,    2.0581,    3.2504,   20.0129,    1.8501},	//K MID 240
+                {-22.3391,   -2.1924,   -1.3580,   -2.3039,    5.7755,    0.8876,   23.3362,    1.7671,    1.5156,    2.4006,   22.6439,    2.2150},	//K TOP 320
+        }; // Ts=1.424ms Q=diag([1 1 500 100 5000 5]) R=[240 0;0 25]//只改了k0
+//static float LQR_k[3][12]=
+//        {
+//                {-14.8835,   -1.0376,   -1.1069,   -1.8502,    8.7680,    1.1975,   25.5319,    1.6562,    2.8701,    4.5137,   14.8088,    1.2065},	//K BOT 160
+//                {-19.3345,   -1.6403,   -1.2814,   -2.1545,    7.0545,    1.0217,   25.2985,    1.6381,    2.8471,    4.4824,   15.8202,    1.2645},	//K MID 240
+//                {-22.3391,   -2.1924,   -1.3580,   -2.3039,    5.7755,    0.8876,   23.3362,    1.7671,    1.5156,    2.4006,   22.6439,    2.2150},	//K TOP 320
+//        }; // Ts=1.424ms Q=diag([1 1 500 100 5000 5]) R=[240 0;0 25]//只改了k0
+
 
 /* [T Tp(髋)] */
 static float LQROutBuf[2][2]={0};
@@ -146,8 +162,8 @@ static arm_matrix_instance_f32 MatLQROutU_R = {2, 1, LQROutBuf[RIGHT]};
 /*Calculate X. Output is u (T,Tp)`*/
 static void LQR_cal()
 {
-	//Calculate error
-	arm_mat_sub_f32(&MatLQRObs_L, &MatLQRRef_L, &MatLQRErrX_L);
+    //Calculate error
+    arm_mat_sub_f32(&MatLQRObs_L, &MatLQRRef_L, &MatLQRErrX_L);
     //Calculate error
     arm_mat_sub_f32(&MatLQRObs_R, &MatLQRRef_R, &MatLQRErrX_R);
 
@@ -179,20 +195,20 @@ static float observe_vx[2], observe_ax; // 观测后得到的数据
 static void chassis_kf_init(void)
 {
     static float P_Init[4] =
-        {
-            10, 0,
-            0, 30
-        };
+            {
+                    10, 0,
+                    0, 30
+            };
     static float F_Init[4] =
-        {
-            1, 0.001,
-            0, 1
-        };
+            {
+                    1, 0.001,
+                    0, 1
+            };
     static float Q_Init[4] =
-        {
-            1, 0,
-            0, 1,
-        };
+            {
+                    1, 0,
+                    0, 1,
+            };
 
     // 设置最小方差
     static float state_min_variance[2] = {0.005, 0.1};
@@ -235,13 +251,13 @@ static void chassis_kf_init(void)
 
 static void chassis_kf_update(void)
 {
-    chassis_kf[LEFT].MeasuredVector[0] = lk_motor[LEFT]->measure.speed_rads * WHEEL_RADIUS + leg[LEFT]->d_l0 - ins.gyro[2] * 0.25f;
+    chassis_kf[LEFT].MeasuredVector[0] = lk_motor[LEFT]->measure.speed_rads * WHEEL_RADIUS + leg[LEFT]->d_phi0*leg[LEFT]->PendulumLength - ins.gyro[2] * 0.25f;
     chassis_kf[LEFT].MeasuredVector[1] = ins.motion_accel_b[0];
     observe_data[LEFT] = Kalman_Filter_Update(&chassis_kf[LEFT]);
     observe_vx[LEFT] = *observe_data[LEFT];
 //    observe_ax = *(observe_data + 1);
 
-    chassis_kf[RIGHT].MeasuredVector[0] = lk_motor[RIGHT]->measure.speed_rads * WHEEL_RADIUS + leg[RIGHT]->d_l0 + ins.gyro[2] * 0.25f;
+    chassis_kf[RIGHT].MeasuredVector[0] = lk_motor[RIGHT]->measure.speed_rads * WHEEL_RADIUS + leg[RIGHT]->d_phi0*leg[LEFT]->PendulumLength + ins.gyro[2] * 0.25f;
     chassis_kf[RIGHT].MeasuredVector[1] = ins.motion_accel_b[0];
     observe_data[RIGHT] = Kalman_Filter_Update(&chassis_kf[RIGHT]);
     observe_vx[RIGHT] = *observe_data[RIGHT];
@@ -325,66 +341,66 @@ void chassis_control_task(void)
 
     switch (chassis_cmd.ctrl_mode)
     {
-    case CHASSIS_RELAX:
-        motor_relax();
-        break;
-    case CHASSIS_INIT:
-        motor_enable();
-        leg_init_get_zero();
-        break;
-    case CHASSIS_RECOVERY:
-        motor_enable();
-        /* 保持腿长，便于倒地自起 */
-        leg[LEFT]->length_ref = /*leg[LEFT]->PendulumLength*/0.1;
-        leg[RIGHT]->length_ref = /*leg[RIGHT]->PendulumLength*/0.1;
-        /* 倒地自起后重置yaw期望和x位移的offset */
-        yaw_target = ins.yaw_total_angle;
-        pos_x_offset[LEFT] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS;
-        pos_x_offset[RIGHT] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS;
-        //TODO: 处于该模式下，应该屏蔽遥控器等控制
-        break;
-    case CHASSIS_FOLLOW_GIMBAL:
-        // motor_enable();
-        break;
-    case CHASSIS_SPIN:
+        case CHASSIS_RELAX:
+            motor_relax();
+            break;
+        case CHASSIS_INIT:
+            motor_enable();
+            leg_init_get_zero();
+            break;
+        case CHASSIS_RECOVERY:
+            motor_enable();
+            /* 保持腿长，便于倒地自起 */
+            leg[LEFT]->length_ref = /*leg[LEFT]->PendulumLength*/0.1;
+            leg[RIGHT]->length_ref = /*leg[RIGHT]->PendulumLength*/0.1;
+            /* 倒地自起后重置yaw期望和x位移的offset */
+            yaw_target = ins.yaw_total_angle;
+            pos_x_offset[LEFT] = lk_motor[LEFT]->measure.total_angle * WHEEL_RADIUS;
+            pos_x_offset[RIGHT] = lk_motor[RIGHT]->measure.total_angle * WHEEL_RADIUS;
+            //TODO: 处于该模式下，应该屏蔽遥控器等控制
+            break;
+        case CHASSIS_FOLLOW_GIMBAL:
+            // motor_enable();
+            break;
+        case CHASSIS_SPIN:
 
-        break;
-    case CHASSIS_OPEN_LOOP:
-        motor_enable();
-        /* 更改腿长 */
-        leg[LEFT]->length_ref = LEN_LOW;
-        leg[RIGHT]->length_ref = LEN_LOW;
-        /* 切换对应的 K 矩阵 */
-        MatLQRNegK.pData = (float*)LQR_k[0];
-        break;
-    case CHASSIS_STAND_MID:
-        motor_enable();
-        leg[LEFT]->length_ref = LEN_MID;
-        leg[RIGHT]->length_ref = LEN_MID;
-        MatLQRNegK.pData = (float*)LQR_k[1];
-        break;
-    case CHASSIS_STAND_HIG:
-        //TODO: 添加对应的遥控切换键位
-        motor_enable();
-        leg[LEFT]->length_ref = LEN_HIG;
-        leg[RIGHT]->length_ref = LEN_HIG;
-        MatLQRNegK.pData = (float*)LQR_k[2];
-        break;
-    case CHASSIS_JUMP:
-        motor_enable();
-        jumping_control();
-        break;
-    case CHASSIS_STOP:
-        ht_motor_disable_all();
-        motor_relax();
-        break;
-    case CHASSIS_FLY:
-        break;
-    case CHASSIS_AUTO:
-        break;
-    default:
-        motor_relax();
-        break;
+            break;
+        case CHASSIS_OPEN_LOOP:
+            motor_enable();
+            /* 更改腿长 */
+            leg[LEFT]->length_ref = LEN_LOW;
+            leg[RIGHT]->length_ref = LEN_LOW;
+            /* 切换对应的 K 矩阵 */
+            MatLQRNegK.pData = (float*)LQR_k[0];
+            break;
+        case CHASSIS_STAND_MID:
+            motor_enable();
+            leg[LEFT]->length_ref = LEN_MID;
+            leg[RIGHT]->length_ref = LEN_MID;
+            MatLQRNegK.pData = (float*)LQR_k[1];
+            break;
+        case CHASSIS_STAND_HIG:
+            //TODO: 添加对应的遥控切换键位
+            motor_enable();
+            leg[LEFT]->length_ref = LEN_HIG;
+            leg[RIGHT]->length_ref = LEN_HIG;
+            MatLQRNegK.pData = (float*)LQR_k[2];
+            break;
+        case CHASSIS_JUMP:
+            motor_enable();
+            jumping_control();
+            break;
+        case CHASSIS_STOP:
+            ht_motor_disable_all();//此时ht不会再响应指令
+            motor_relax();//relax内部只是给电机发送的命令为零，电机仍具有响应命令的能力
+            break;
+        case CHASSIS_FLY:
+            break;
+        case CHASSIS_AUTO:
+            break;
+        default:
+            motor_relax();
+            break;
     }
 
 #ifdef SLIP_DETECTION
@@ -684,13 +700,14 @@ static int chassis_motor_init(void)
     lk_motor_init();
 
     pid_config_t length_pid_config = INIT_PID_CONFIG(500, 0, 200, 0, 500,
-                                                   (PID_Integral_Limit | PID_DerivativeFilter));
+                                                     (PID_Integral_Limit | PID_DerivativeFilter));
     length_pid[LEFT] = pid_register(&length_pid_config);
     length_pid[RIGHT] = pid_register(&length_pid_config);
 
     // TODO: 两腿协调 PD 控制，航向角控制，横滚角补偿控制
     /* 两腿协调 PD 控制 */
-    pid_config_t theta_pid_config = INIT_PID_CONFIG(15, 0, 0.2, 0, 2, PID_Integral_Limit);
+//    pid_config_t theta_pid_config = INIT_PID_CONFIG(15, 0, 0.2, 0, 2, PID_Integral_Limit);//加云台前
+    pid_config_t theta_pid_config = INIT_PID_CONFIG(15, 0, 0.2, 0, 5, PID_Integral_Limit);//加云台后，输出不够会劈叉
     theta_pid = pid_register(&theta_pid_config);
     /* 航向角 PD 控制 */
     pid_config_t yaw_pid_config = INIT_PID_CONFIG(0.25, 0, 0.01, 0, 2, PID_Integral_Limit);
@@ -774,8 +791,10 @@ static void leg_calc()
 {
     float len_pid_out;
     // 左腿解算
+    //更新phi1、phi4并通过判断phi1和phi4的大小判断腿的状态是否正常
     leg[LEFT]->input_leg_angle(leg[LEFT], /*-0.42*/(ht_motor[LEFT_BACK]->measure.total_angle - HT_OFFSET_LB), /*3.6*/PI + (ht_motor[LEFT_FRONT]->measure.total_angle - HT_OFFSET_LF));
-    leg[LEFT]->resolve(leg[LEFT]);
+    leg[LEFT]->resolve(leg[LEFT]);//求得摆角、摆长 [phi0; l0]，并更新phi2、phi3和倒立摆模型各点坐标
+    //求得腿部运动速度 [dl0; dphi0; ddl0]
     leg[LEFT]->get_leg_spd(leg[LEFT], ht_motor[LEFT_FRONT]->measure.speed_rads, ht_motor[LEFT_BACK]->measure.speed_rads);
 
     // 右腿解算
@@ -783,7 +802,9 @@ static void leg_calc()
     leg[RIGHT]->resolve(leg[RIGHT]);
     leg[RIGHT]->get_leg_spd(leg[RIGHT], -ht_motor[RIGHT_FRONT]->measure.speed_rads, -ht_motor[RIGHT_BACK]->measure.speed_rads);
 
+    //更新观测量和从cmd得到的目标期望，目前x的期望和观测的值始终一致，后续视情况可能需要更改
     update_LQR_obs();
+    //通过观测值和期望值的差得到驱动轮电机的输出扭矩，对应lk，在LQROutBuf里更新
     LQR_cal();
 
     /* 双腿角度协调控制 */
@@ -811,6 +832,7 @@ static void leg_calc()
     leg[RIGHT]->support_force = ft_r[0] + LEG_MASS * 9.8f + LEG_MASS * (ins.motion_accel_b[2] - leg[RIGHT]->dd_l0);
     isTouchingGround = (leg[LEFT]->support_force < 15) && (leg[RIGHT]->support_force < 15); //判断当前瞬间是否接地
 
+    //解算得到对应腿前后两关节电机的输出力矩,对应HT电机，在vmc_out_l/r里更新
     leg[LEFT]->VMC_cal(leg[LEFT], ft_l, vmc_out_l);
     leg[RIGHT]->VMC_cal(leg[RIGHT], ft_r, vmc_out_r);
 }
@@ -835,23 +857,23 @@ static void jumping_control(void)
     if(jump_flag)
     {
 
-    if(!is_jumping)
-    {
-        is_jumping = 1;
-        jump_start_time = current_time;
-    }
-    dt = current_time - jump_start_time;
+        if(!is_jumping)
+        {
+            is_jumping = 1;
+            jump_start_time = current_time;
+        }
+        dt = current_time - jump_start_time;
 
-    jump_out_l[FRONT] = -JUMP_TORQUE_PRESS * (dt<200) + JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
-    jump_out_l[BACK]  =  JUMP_TORQUE_PRESS * (dt<200) - JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
-    jump_out_r[FRONT] =  JUMP_TORQUE_PRESS * (dt<200) - JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
-    jump_out_r[BACK]  = -JUMP_TORQUE_PRESS * (dt<200) + JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
+        jump_out_l[FRONT] = -JUMP_TORQUE_PRESS * (dt<200) + JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
+        jump_out_l[BACK]  =  JUMP_TORQUE_PRESS * (dt<200) - JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
+        jump_out_r[FRONT] =  JUMP_TORQUE_PRESS * (dt<200) - JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
+        jump_out_r[BACK]  = -JUMP_TORQUE_PRESS * (dt<200) + JUMP_TORQUE_SHRINK * (dt>150 && dt<300);
 
-    if (dt > 400)
-    {
-        is_jumping = 0;  // 跳跃结束
-        jump_flag = 0;  // 跳跃结束
-    }
+        if (dt > 400)
+        {
+            is_jumping = 0;  // 跳跃结束
+            jump_flag = 0;  // 跳跃结束
+        }
     }
 }
 #endif /* BSP_CHASSIS_MECANUM_MODE */

@@ -11,6 +11,10 @@
 /* 同一个主题名称不可被重复定义 */
 MCN_DEFINE(chassis_cmd, sizeof(struct chassis_cmd_msg));
 MCN_DEFINE(chassis_fdb, sizeof(struct chassis_fdb_msg));
+MCN_DEFINE(gimbal_cmd, sizeof(struct gimbal_cmd_msg));
+MCN_DEFINE(gimbal_fdb, sizeof(struct gimbal_fdb_msg));
+MCN_DEFINE(shoot_cmd, sizeof(struct shoot_cmd_msg));
+MCN_DEFINE(shoot_fdb, sizeof(struct shoot_fdb_msg));
 MCN_DEFINE(ins_topic, sizeof(struct ins_msg));
 MCN_DEFINE(trans_fdb,sizeof(struct trans_fdb_msg));
 
@@ -32,6 +36,8 @@ void robot_init()
     motor_task_init();
     cmd_task_init();
     chassis_task_init();
+    gimbal_task_init();
+    shoot_task_init();
     trans_task_init();
 
     // 初始化完成,开启中断
@@ -47,5 +53,9 @@ static void mcn_topic_init(void)
     mcn_advertise(MCN_HUB(ins_topic), NULL);
     mcn_advertise(MCN_HUB(chassis_cmd), NULL);
     mcn_advertise(MCN_HUB(chassis_fdb), NULL);
+    mcn_advertise(MCN_HUB(gimbal_cmd), NULL);
+    mcn_advertise(MCN_HUB(gimbal_fdb), NULL);
+    mcn_advertise(MCN_HUB(shoot_cmd), NULL);
+    mcn_advertise(MCN_HUB(shoot_fdb), NULL);
     mcn_advertise(MCN_HUB(trans_fdb), NULL);
 }

@@ -3,6 +3,8 @@
 
 #include "rm_module.h"
 #include "chassis_task.h"
+#include "gimbal_task.h"
+#include "shoot_task.h"
 
 /**
  * @brief 机器人初始化,请在开启rtos之前调用
@@ -28,6 +30,15 @@ struct ins_msg
     float pitch;
     float yaw;
     float yaw_total_angle;
+
+    float gyro_gim[3];  // 角速度
+    float accel_gim[3]; // 加速度
+    float motion_accel_b_gim[3]; // 机体坐标加速度
+    // 位姿
+    float roll_gim;
+    float pitch_gim;
+    float yaw_gim;
+    float yaw_total_angle_gim;
 };
 
 /* ----------------CMD应用发布的控制数据,应当由gimbal/chassis/shoot订阅---------------- */
@@ -47,6 +58,56 @@ struct chassis_cmd_msg
     chassis_mode_e ctrl_mode;  // 当前底盘控制模式
     chassis_mode_e last_mode;  // 上一次底盘控制模式
 };
+
+/**
+ * @brief cmd发布的云台控制数据,由gimbal订阅
+ */
+struct gimbal_cmd_msg
+{ // 云台期望角度控制
+    float yaw;
+    float pitch;
+    gimbal_mode_e ctrl_mode;  // 当前云台控制模式
+    gimbal_mode_e last_mode;  // 上一次云台控制模式
+};
+
+/**
+ * @brief cmd发布的云台控制数据,由shoot订阅
+ */
+struct shoot_cmd_msg
+{ // 发射器
+    shoot_mode_e ctrl_mode;  // 当前发射器控制模式
+    shoot_mode_e last_mode;  // 上一次发射器控制模式
+    trigger_mode_e trigger_status;
+    int16_t shoot_freq;      // 发射弹频
+    // TODO: 添加发射弹速控制
+    int16_t shoot_speed;     // 发射弹速
+    uint8_t cover_open;      // 弹仓盖开关
+};
+
+/* ------------------------------ gimbal反馈状态数据 ------------------------------ */
+/**
+ * @brief 云台真实反馈状态数据,由gimbal发布
+ */
+struct gimbal_fdb_msg
+{
+    gimbal_back_e back_mode;  // 云台归中情况
+
+    float yaw_offset_angle_total;    //云台初始 yaw 轴角度 （由imu得）
+    float yaw_offset_angle;    //云台初始 yaw 轴角度 （由imu得）
+    float pit_offset_angle;    //云台初始 pit 轴角度 （由imu得）
+    float yaw_relative_angle;  //云台相对于初始位置的yaw轴角度
+};
+
+/* ------------------------------ shoot反馈状态数据 ------------------------------ */
+/**
+ * @brief 发射机真实反馈状态数据,由shoot发布
+ */
+struct shoot_fdb_msg
+{
+    shoot_back_e shoot_mode;  // shoot状态反馈
+    int16_t trigger_motor_current; //拨弹电机电流，传给cmd控制反转
+};
+
 
 /* ------------------------------ chassis反馈状态数据 ------------------------------ */
 /**

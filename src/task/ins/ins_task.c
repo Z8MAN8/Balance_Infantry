@@ -12,6 +12,9 @@
 #define Y 1
 #define Z 2
 
+//#define SEND
+#define RECEIVE
+
 /* ------------------------------- ipc 线程间通讯相关 ------------------------------ */
 MCN_DECLARE(ins_topic);
 static struct ins_msg ins_data;
@@ -30,6 +33,9 @@ static void temp_pwm_init(uint32_t period, uint32_t pulse);
 /* ---------------------------- Attitude_Solving ---------------------------- */
 static ins_t ins;
 static imu_param_t imu_param;
+static uint8_t  ins_receive_gyro[8];
+static uint8_t  ins_receive_angle[8];
+static uint8_t  ins_receive_total_angle[8];
 
 const float xb[3] = {1, 0, 0};
 const float yb[3] = {0, 1, 0};
@@ -44,8 +50,74 @@ static void QuaternionToEularAngle(float *q, float *Yaw, float *Pitch, float *Ro
 static void EularAngleToQuaternion(float Yaw, float Pitch, float Roll, float *q);
 static void InitQuaternion(float *init_q4);
 
+extern CAN_HandleTypeDef hcan1;
+extern CAN_HandleTypeDef hcan2;
+
 /* ---------------------------- Attitude_Solving ---------------------------- */
 static float ins_dt;
+
+/**
+* @brief 接收上板传感器发送的数据,该函数被can_rx_call调用
+*
+* @param id 接收到的报文的id
+* @param data 接收到的报文的数据
+*
+*/
+
+int ins_rx_callback(uint32_t id, uint8_t *data){
+    // 找到对应的实例后再调用motor_decode进行解析
+
+    if (0x134 == id)
+    {
+
+        ins_receive_gyro[0]=data[0];
+        ins_receive_gyro[1]=data[1];
+        ins_receive_gyro[2]=data[2];
+        ins_receive_gyro[3]=data[3];
+        ins_receive_gyro[4]=data[4];
+        ins_receive_gyro[5]=data[5];
+        ins_receive_gyro[6]=data[6];
+        ins_receive_gyro[7]=data[7];
+
+
+        return 0;
+    }
+    if (0x135 == id)
+    {
+
+        ins_receive_angle[0]=data[0];
+        ins_receive_angle[1]=data[1];
+        ins_receive_angle[2]=data[2];
+        ins_receive_angle[3]=data[3];
+        ins_receive_angle[4]=data[4];
+        ins_receive_angle[5]=data[5];
+        ins_receive_angle[6]=data[6];
+        ins_receive_angle[7]=data[7];
+
+        return 0;
+    }
+    if (0x136 == id)
+    {
+
+        ins_receive_total_angle[0]=data[0];
+        ins_receive_total_angle[1]=data[1];
+        ins_receive_total_angle[2]=data[2];
+        ins_receive_total_angle[3]=data[3];
+        ins_receive_total_angle[4]=data[4];
+        ins_receive_total_angle[5]=data[5];
+        ins_receive_total_angle[6]=data[6];
+        ins_receive_total_angle[7]=data[7];
+
+        return 0;
+    }
+
+
+    return -1;
+
+}
+
+
+
 __attribute__((noreturn)) void ins_task_entry(void const *argument)
 {
     /* USER CODE BEGIN InsTask */
@@ -122,6 +194,75 @@ __attribute__((noreturn)) void ins_task_entry(void const *argument)
             ins_data.motion_accel_b[0] = ins.motion_accel_b[0];
             ins_data.motion_accel_b[1] = ins.motion_accel_b[1];
             ins_data.motion_accel_b[2] = ins.motion_accel_b[2];
+
+#ifdef SEND
+             uint8_t data_gim_gyro[8];//上板发送给的云台部分的imu数据
+             uint8_t data_gim_angle[8];
+             uint8_t data_gim_total_angle[8];
+
+
+            uint32_t *temp_gyro1 = (uint32_t *)&ins_data.gyro[1];
+            uint32_t *temp_gyro2 = (uint32_t *)&ins_data.gyro[2];
+            uint32_t *temp_yaw = (uint32_t *)&ins_data.yaw;
+            uint32_t *temp_pitch = (uint32_t *)&ins_data.pitch;
+            uint32_t *temp_yaw_total_angle = (uint32_t *)&ins_data.yaw_total_angle;
+
+
+            data_gim_gyro[3] = *temp_gyro1 >> 24;
+            data_gim_gyro[2] = *temp_gyro1 >> 16;
+            data_gim_gyro[1] = *temp_gyro1 >> 8;
+            data_gim_gyro[0] = *temp_gyro1;
+            data_gim_gyro[7] = *temp_gyro2 >> 24;
+            data_gim_gyro[6] = *temp_gyro2 >> 16;
+            data_gim_gyro[5] = *temp_gyro2 >> 8;
+            data_gim_gyro[4] = *temp_gyro2;
+
+            data_gim_angle[3] = *temp_yaw >> 24;
+            data_gim_angle[2] = *temp_yaw >> 16;
+            data_gim_angle[1] = *temp_yaw >> 8;
+            data_gim_angle[0] = *temp_yaw;
+            data_gim_angle[7] = *temp_pitch >> 24;
+            data_gim_angle[6] = *temp_pitch >> 16;
+            data_gim_angle[5] = *temp_pitch >> 8;
+            data_gim_angle[4] = *temp_pitch;
+
+            data_gim_total_angle[3] = *temp_yaw_total_angle >> 24;
+            data_gim_total_angle[2] = *temp_yaw_total_angle >> 16;
+            data_gim_total_angle[1] = *temp_yaw_total_angle >> 8;
+            data_gim_total_angle[0] = *temp_yaw_total_angle;
+            data_gim_total_angle[7] = 0;
+            data_gim_total_angle[6] = 0;
+            data_gim_total_angle[5] = 0;
+            data_gim_total_angle[4] = 0;
+
+
+            CAN_send(&hcan1,0x134,data_gim_gyro);
+            CAN_send(&hcan1,0x135,data_gim_angle);
+            CAN_send(&hcan1,0x136,data_gim_total_angle);
+#endif
+
+#ifdef RECEIVE
+
+            uint32_t  gyro1 = (uint32_t  )ins_receive_gyro[0] | (((uint32_t )ins_receive_gyro[1]) << 8) | (((uint32_t )ins_receive_gyro[2]) << 16)
+                    | (((uint32_t )ins_receive_gyro[3]) << 24) ;;
+            uint32_t gyro2 = (uint32_t )ins_receive_gyro[4] | (((uint32_t )ins_receive_gyro[5]) << 8) | (((uint32_t )ins_receive_gyro[6]) << 16)
+                             | (((uint32_t )ins_receive_gyro[7]) << 24) ;
+            uint32_t yaw = (uint32_t )ins_receive_angle[0] | (((uint32_t )ins_receive_angle[1]) << 8) | (((uint32_t )ins_receive_angle[2]) << 16)
+                           | (((uint32_t )ins_receive_angle[3]) << 24) ;
+            uint32_t pitch = (uint32_t )ins_receive_angle[4] | (((uint32_t )ins_receive_angle[5]) << 8) | (((uint32_t )ins_receive_angle[6]) << 16)
+                             | (((uint32_t )ins_receive_angle[7]) << 24) ;
+            uint32_t yaw_total_angle = (uint32_t  )ins_receive_total_angle[0] | (((uint32_t )ins_receive_total_angle[1]) << 8)
+                    | (((uint32_t )ins_receive_total_angle[2])) << 16 | (((uint32_t )ins_receive_total_angle[3]) << 24) ;
+
+            ins_data.gyro_gim[1]=*((float *)&gyro1);
+            ins_data.gyro_gim[2]=*((float *)&gyro2);
+            ins_data.yaw_gim=*((float *)&yaw);
+            ins_data.pitch_gim=*((float *)&pitch);
+            ins_data.yaw_total_angle_gim=*((float *)&yaw_total_angle);
+
+
+#endif
+
             mcn_publish(MCN_HUB(ins_topic), &ins_data);
         }
 

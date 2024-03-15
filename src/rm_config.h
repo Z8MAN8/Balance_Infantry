@@ -106,25 +106,38 @@
 #define CHASSIS_MAX_V_FOLLOW            1500
 
 /* ---------------------------------- 云台相关 ---------------------------------- */
-#define YAW_MOTOR_ID     0x207
-#define PITCH_MOTOR_ID   0x208
+#define YAW_MOTOR_ID     0x20A
+#define PITCH_MOTOR_ID   0x205
 
-#define CENTER_ECD_YAW   7837         //云台yaw轴编码器归中值
-#define CENTER_ECD_PITCH 1420         //云台pitch轴编码器归中值
+//#define CENTER_ECD_YAW   7837         //云台yaw轴编码器归中值
+//#define CENTER_ECD_PITCH 1420         //云台pitch轴编码器归中值
+#define CENTER_ECD_YAW   4054         //云台yaw轴编码器归中值
+#define CENTER_ECD_PITCH 1970         //云台pitch轴编码器归中值
 
+
+///* pitch轴最大仰角 */
+//#define PIT_ANGLE_MAX        31.5f
+///* pitch轴最大俯角 */
+//#define PIT_ANGLE_MIN        -32.9f
 /* pitch轴最大仰角 */
-#define PIT_ANGLE_MAX        31.5f
+#define PIT_ANGLE_MIN        -35.5f
 /* pitch轴最大俯角 */
-#define PIT_ANGLE_MIN        -32.9f
+#define PIT_ANGLE_MAX        39.2f
+
+
+/* 云台控制周期 (ms) */
+#define GIMBAL_PERIOD 1
+/* 云台回中初始化时间 (ms) */
+#define BACK_CENTER_TIME 800
 
 /* -------------------------------- 云台电机PID参数 ------------------------------- */
-/* 云台yaw轴电机PID参数 */
-/* imu速度环 */
-#define YAW_KP_V_IMU             5000
-#define YAW_KI_V_IMU             200
-#define YAW_KD_V_IMU             10
+
+/* imu速度环 */           //成功但是归中后手动拨乱时矫正稍慢
+#define YAW_KP_V_IMU             180
+#define YAW_KI_V_IMU             0
+#define YAW_KD_V_IMU             0.05
 #define YAW_INTEGRAL_V_IMU       1000
-#define YAW_MAX_V_IMU            30000
+#define YAW_MAX_V_IMU            10000
 /* imu角度环 */
 #define YAW_KP_A_IMU             0.35f
 #define YAW_KI_A_IMU             0
@@ -146,17 +159,28 @@
 
 /* 云台PITCH轴电机PID参数 */
 /* imu速度环 */
-#define PITCH_KP_V_IMU           4250
-#define PITCH_KI_V_IMU           1000
-#define PITCH_KD_V_IMU           3
+#define PITCH_KP_V_IMU           2500
+#define PITCH_KI_V_IMU           0
+#define PITCH_KD_V_IMU           0
+//#define PITCH_KD_V_IMU           1
 #define PITCH_INTEGRAL_V_IMU     1500
-#define PITCH_MAX_V_IMU          20000
+#define PITCH_MAX_V_IMU          30000
+
+
 /* imu角度环 */
-#define PITCH_KP_A_IMU           0.5f
-#define PITCH_KI_A_IMU           0.0f
-#define PITCH_KD_A_IMU           0.005f
+#define PITCH_KP_A_IMU           4
+#define PITCH_KI_A_IMU           0.05f
+//#define PITCH_KD_A_IMU           0.005f
+#define PITCH_KD_A_IMU           0
 #define PITCH_INTEGRAL_A_IMU     0.2f
-#define PITCH_MAX_A_IMU          20
+#define PITCH_MAX_A_IMU          7.5
+///* imu角度环 */
+//#define PITCH_KP_A_IMU           0.5f
+//#define PITCH_KI_A_IMU           0.0f
+//#define PITCH_KD_A_IMU           0.005f
+//#define PITCH_INTEGRAL_A_IMU     0.2f
+//#define PITCH_MAX_A_IMU          20
+
 /* auto速度环 */
 #define PITCH_KP_V_AUTO          0
 #define PITCH_KI_V_AUTO          0
@@ -169,5 +193,45 @@
 #define PITCH_KD_A_AUTO          0
 #define PITCH_INTEGRAL_A_AUTO    0
 #define PITCH_MAX_A_AUTO         0
+
+/* ---------------------------------- 发射相关 ---------------------------------- */
+// TODO: 实际值待整定
+#define RIGHT_FRICTION_MOTOR_ID     0x201
+#define LEFT_FRICTION_MOTOR_ID   0x202
+#define TRIGGER_MOTOR_ID  0x203
+
+#define TRIGGER_MOTOR_45_TO_ANGLE 45
+/* -------------------------------- 发射电机PID参数 ------------------------------- */
+// TODO: 速度期望应改为变量应对速度切换。初次参数调整已完成
+/* 右摩擦轮M3508电机PID参数 */
+/* 速度环 */
+#define RIGHT_KP_V             18
+#define RIGHT_KI_V             2
+#define RIGHT_KD_V             0.02f
+#define RIGHT_INTEGRAL_V       2000
+#define RIGHT_MAX_V            30000
+
+/* 左摩擦轮M3508电机PID参数 */
+/* 速度环 */
+#define LEFT_KP_V           18
+#define LEFT_KI_V           2
+#define LEFT_KD_V           0.02f
+#define LEFT_INTEGRAL_V     2000
+#define LEFT_MAX_V          30000
+
+// TODO：PID参数初次微调已完成，期待后续微调
+/* 拨弹电机M2006电机PID参数 */
+/* 速度环 */
+#define TRIGGER_KP_V           10
+#define TRIGGER_KI_V           5
+#define TRIGGER_KD_V           0.01f
+#define TRIGGER_INTEGRAL_V     1500
+#define TRIGGER_MAX_V          20000
+/* 角度环 */
+#define TRIGGER_KP_A           20
+#define TRIGGER_KI_A           2
+#define TRIGGER_KD_A           0
+#define TRIGGER_INTEGRAL_A     10
+#define TRIGGER_MAX_A          5000
 
 #endif /* _RM_CONFIG_H */

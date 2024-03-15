@@ -46,10 +46,10 @@ typedef struct leg_obj
 	float CoorC[2];
 	/*第二象限节点坐标*/
 	float CoorB[2];
-	float U2;
+	float U2;//phi2
 	/*第二象限节点坐标*/
 	float CoorD[2];
-	float U3;
+	float U3;//phi3
 
     /*倒立摆期望长度*/
 	float length_ref;
