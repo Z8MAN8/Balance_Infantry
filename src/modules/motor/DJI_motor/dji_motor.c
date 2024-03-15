@@ -75,12 +75,16 @@ static void motor_send_grouping(dji_motor_object_t *motor, motor_config_t *confi
         if (motor_id <= 4) // 根据ID分组
         {
             motor_send_num = motor_id - 1;
-            motor_group = (config->can_id == 1) ? 4 : 1;
+//            motor_group = (config->can_id == 1) ? 4 : 1;
+            motor_group = 4;
+//            motor_group = (config->can_id == 1) ? 1 : 4;
         }
         else
         {
             motor_send_num = motor_id - 5;
-            motor_group = (config->can_id == 1) ? 3 : 0;
+            motor_group = 3;
+//            motor_group = (config->can_id == 1) ? 3 : 0;
+//            motor_group = (config->can_id == 1) ? 0 : 3;
         }
 
         // 计算接收id并设置分组发送id
@@ -105,12 +109,16 @@ static void motor_send_grouping(dji_motor_object_t *motor, motor_config_t *confi
         if (motor_id <= 4)
         {
             motor_send_num = motor_id - 1;
-            motor_group = (config->can_id == 1) ? 3 : 0;
+            motor_group = 3;
+//            motor_group = (config->can_id == 1) ? 3 : 0;
+//            motor_group = (config->can_id == 1) ? 0 : 3;
         }
         else
         {
             motor_send_num = motor_id - 5;
-            motor_group = (config->can_id == 1) ? 5 : 2;
+            motor_group = 5;
+//            motor_group = (config->can_id == 1) ? 5 : 2;
+//            motor_group = (config->can_id == 1) ? 2 : 5;
         }
 
         sender_enable_flag[motor_group] = 1; // 只要有电机注册到这个分组,置为1;在发送函数中会通过此标志判断是否有电机注册
@@ -205,6 +213,17 @@ void dji_motor_enable(dji_motor_object_t *motor)
     motor->stop_flag = MOTOR_ENALBED;
 }
 
+//调试用
+ int16_t set_temp[8]={0,};
+ static struct dji_msg send_msg_temp[6] = {
+         [0] = {0x1ff},
+         [1] = {0x200},
+         [2] = {0x2ff},
+         [3] = {0x1ff},
+         [4] = {0x200},
+         [5] = {0x2ff},
+ };
+
 // 运算所有电机实例的控制器,发送控制报文
 void dji_motor_control()
 {
@@ -221,16 +240,23 @@ void dji_motor_control()
         measure = motor->measure;
 
         set = motor->control(measure); // 调用对接的电机控制器计算
+        set_temp[i]=set;
 
         // 分组填入发送数据
         group = motor->send_group;
         num = motor->message_num;
         send_msg[group].data[2 * num] = (uint8_t)(set >> 8);
         send_msg[group].data[2 * num + 1] = (uint8_t)(set & 0x00ff);
+//        send_msg[group].data[2 * num] = set;
+//        send_msg[group].data[2 * num + 1] = set>>8;
+//        send_msg_temp[group].data[2 * num] = set;
+//        send_msg_temp[group].data[2 * num + 1] = set>>8;
 
         // 若该电机处于停止状态,直接将buff置零
         if (motor->stop_flag == MOTOR_STOP)
             memset(send_msg[group].data + 2 * num, 0, 2 * sizeof(uint8_t ));
+//            dji_motor_enable(motor);
+
     }
 
     // 遍历flag,检查是否要发送这一帧报文
@@ -238,11 +264,24 @@ void dji_motor_control()
     {
         if (sender_enable_flag[i])
         {
+//            int16_t motor=1000;
+//            send_msg[i].data[0]=motor>>8;
+//            send_msg[i].data[1]=motor;
+//            send_msg[i].data[2]=motor>>8;
+//            send_msg[i].data[3]=motor;
+//            send_msg[i].data[4]=motor>>8;
+//            send_msg[i].data[5]=motor;
+//            send_msg[i].data[6]=motor>>8;
+//            send_msg[i].data[7]=motor;
+//            send_msg[i].data[0]=motor>>8;
+//            send_msg[i].data[1]=motor;
+//            send_msg[i].data[2]=motor>>8;
+//            send_msg[i].data[3]=motor;
             if(i < 3){
-                CAN_send(&CAN_CHASSIS, motor->tx_id, send_msg[i].data);
+//                CAN_send(&CAN_CHASSIS, send_msg[i].id, send_msg[i].data);
             }
             else{
-                CAN_send(&CAN_GIMBAL, motor->tx_id, send_msg[i].data);
+                CAN_send(&CAN_GIMBAL, send_msg[i].id, send_msg[i].data);
             }
         }
     }
