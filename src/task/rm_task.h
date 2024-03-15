@@ -20,6 +20,8 @@
 #include "motor_task.h"
 #include "cmd_task.h"
 #include "chassis_task.h"
+#include "gimbal_task.h"
+#include "shoot_task.h"
 #include "trans_task.h"
 
 /* ---------------------------------- 线程相关 ---------------------------------- */
@@ -92,6 +94,8 @@ __attribute__((noreturn)) void robot_task_entry(void const *argument)
 
         cmd_control_task();
         chassis_control_task();
+        gimbal_control_task();
+        shoot_control_task();
 
         vTaskDelayUntil(&robot_wake_time, 1);  // 平衡步兵需要1khz
     }

@@ -1,6 +1,7 @@
 #include "motor_task.h"
 #include "rm_module.h"
 #include "robot.h"
+#include "shoot_task.h"
 static osMutexId semMotorHandle; // 触发CAN消息发送的信号量
 
 void motor_task_init(void)
@@ -10,7 +11,8 @@ void motor_task_init(void)
 }
 
 //float lk_dt, lk_start;
-
+extern CAN_HandleTypeDef hcan2;
+extern  dji_motor_object_t *sht_motor[3];
 void motor_control_task(void)
 {
 //    static osEvent evt;
@@ -30,6 +32,51 @@ void motor_control_task(void)
                 ht_controller(i);
             }
         }*/
+
+//前期测试
+//    int16_t motor=5000;
+//    uint8_t data[8]={0,};
+//
+//    data[0]=motor>>8;
+//    data[1]=motor;
+//    data[2]=motor>>8;
+//    data[3]=motor;
+//    data[4]=motor>>8;
+//    data[5]=motor;
+//    data[6]=motor>>8;
+//    data[7]=motor;
+//    data[0]=motor>>8;
+//    data[1]=motor;
+//    data[2]=motor>>8;
+//    data[3]=motor;
+//    CAN_send(&hcan2,0x2ff,data);
+
+
+int16_t  send_shoot_right;
+int16_t  send_shoot_left;
+int16_t  send_shoot_trigger;
+
+//调试用
+//    send_shoot_right=sht_motor[0]->control(sht_motor[0]->measure);
+//    send_shoot_left=sht_motor[1]->control(sht_motor[0]->measure);
+//    send_shoot_trigger=sht_motor[2]->control(sht_motor[0]->measure);
+//
+//    uint8_t data_shoot[8];
+//
+//    data_shoot[0]=send_shoot_right>>8;
+//    data_shoot[1]=send_shoot_right;
+//    data_shoot[2]=send_shoot_left>>8;
+//    data_shoot[3]=send_shoot_left;
+//    data_shoot[4]=send_shoot_trigger>>8;
+//    data_shoot[5]=send_shoot_trigger;
+//    data_shoot[6]=0;
+//    data_shoot[7]=0;
+//    data_shoot[8]=0;
+//
+//    CAN_send(&hcan2, 0x200, data_shoot);
+
+
+    dji_motor_control();
     lk_motor_control();
 }
 
