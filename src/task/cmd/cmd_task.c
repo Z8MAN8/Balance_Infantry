@@ -2,16 +2,21 @@
 #include "rm_module.h"
 #include "robot.h"
 
-static rc_obj_t *rc_now, *rc_last;
-
+//static rc_obj_t *rc_now, *rc_last;
+static rc_dbus_obj_t *rc_now, *rc_last;
 /* ------------------------------- ipc 线程间通讯相关 ------------------------------ */
 // 订阅
 MCN_DECLARE(chassis_fdb);
 static McnNode_t chassis_fdb_node;
 static struct chassis_fdb_msg chassis_fdb;
+MCN_DECLARE(gimbal_fdb);
+static McnNode_t gimbal_fdb_node;
+static struct gimbal_fdb_msg gimbal_fdb;
 // 发布
 MCN_DECLARE(chassis_cmd);
 static struct chassis_cmd_msg chassis_cmd_data;
+MCN_DECLARE(gimbal_cmd);
+static struct gimbal_cmd_msg gimbal_cmd_data;
 
 static void cmd_pub_push(void);
 static void cmd_sub_init(void);
@@ -25,7 +30,8 @@ static void remote_to_cmd(void);
 void cmd_task_init(void)
 {
     cmd_sub_init();
-    rc_now = sbus_rc_init();
+    //rc_now = sbus_rc_init();
+    rc_now = dbus_rc_init();
     rc_last = (rc_now + 1);   // rc_obj[0]:当前数据NOW,[1]:上一次的数据LAST
 }
 
@@ -81,7 +87,7 @@ static void remote_to_cmd(void)
                /*if(usr_abs(obs_data.phi) <= 0.05)
                {*/
                    chassis_cmd_data.ctrl_mode = CHASSIS_OPEN_LOOP;
-                   if (rc_now->sw4 == RC_DN)
+                   if (rc_now->sw1 == RC_MI)
                    {
                        chassis_cmd_data.ctrl_mode = CHASSIS_STAND_MID;
                    }
@@ -94,15 +100,15 @@ static void remote_to_cmd(void)
            else
            {
                chassis_cmd_data.ctrl_mode = CHASSIS_OPEN_LOOP;
-               if (rc_now->sw4 == RC_DN)
+               if (rc_now->sw1 == RC_MI)
                {
                    chassis_cmd_data.ctrl_mode = CHASSIS_STAND_MID;
                }
 
-               if (rc_now->sw1 == RC_DN)
+ /*              if (rc_now->sw1 == RC_DN)
                {   //TODO：增加按钮是否切换判断，切换才触发一次，维持不触发（参考老代码 keyboard 驱动）
                    chassis_cmd_data.ctrl_mode = CHASSIS_JUMP;
-               }
+               }*/
            }
 
        }
@@ -113,7 +119,7 @@ static void remote_to_cmd(void)
        break;
    }
 
-   if(rc_now->sw3 == RC_DN)
+   if(rc_now->sw1 == RC_DN)
    {
        chassis_cmd_data.ctrl_mode = CHASSIS_STOP;
    }
@@ -162,6 +168,7 @@ static void cmd_pub_push(void)
 {
     // data_content my_data = ;
     mcn_publish(MCN_HUB(chassis_cmd), &chassis_cmd_data);
+    mcn_publish(MCN_HUB(gimbal_cmd), &gimbal_cmd_data);
 }
 
 /**
@@ -170,6 +177,7 @@ static void cmd_pub_push(void)
 static void cmd_sub_init(void)
 {
     chassis_fdb_node = mcn_subscribe(MCN_HUB(chassis_fdb), NULL, NULL);
+    gimbal_fdb_node = mcn_subscribe(MCN_HUB(gimbal_fdb), NULL, NULL);
 }
 
 
@@ -181,5 +189,9 @@ static void cmd_sub_pull(void)
     if (mcn_poll(chassis_fdb_node))
     {
         mcn_copy(MCN_HUB(chassis_fdb), chassis_fdb_node, &chassis_fdb);
+    }
+    if (mcn_poll(gimbal_fdb_node))
+    {
+        mcn_copy(MCN_HUB(gimbal_fdb), gimbal_fdb_node, &gimbal_fdb);
     }
 }
