@@ -27,5 +27,6 @@
 #include "BMI088driver.h"
 #include "uMCN.h"
 #include "bsp_log.h"
+#include "rc_dbus.h"
 
 #endif /* _RM_MODULE_H */

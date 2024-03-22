@@ -315,10 +315,10 @@ void USART3_IRQHandler(void)
 
             //get receive data length, length = set_data_length - remain_length
             //获取接收数据长度,长度 = 设定长度 - 剩余长度
-            this_time_rx_len = SBUS_RX_BUF_NUM - hdma_usart3_rx.Instance->NDTR;
+            this_time_rx_len = DBUS_RX_BUF_NUM - hdma_usart3_rx.Instance->NDTR;
 
             //重新设定数据长度
-            hdma_usart3_rx.Instance->NDTR = SBUS_RX_BUF_NUM;
+            hdma_usart3_rx.Instance->NDTR = DBUS_RX_BUF_NUM;
 
             //设定缓冲�?1
             hdma_usart3_rx.Instance->CR |= DMA_SxCR_CT;
@@ -326,10 +326,11 @@ void USART3_IRQHandler(void)
             //使能DMA
             __HAL_DMA_ENABLE(&hdma_usart3_rx);
 
-            if(this_time_rx_len == SBUS_FRAME_SIZE)
+            if(this_time_rx_len == DBUS_FRAME_SIZE)
             {
                 //处理遥控器数�?
-                sbus_rc_decode(sbus_rx_buf[0]);
+                //sbus_rc_decode(sbus_rx_buf[0]);
+                dbus_rc_decode(dbus_rx_buf[0]);
 //                rt_timer_start(rc_timer);
             }
         }
@@ -341,10 +342,10 @@ void USART3_IRQHandler(void)
 
             //get receive data length, length = set_data_length - remain_length
             //获取接收数据长度,长度 = 设定长度 - 剩余长度
-            this_time_rx_len = SBUS_RX_BUF_NUM - hdma_usart3_rx.Instance->NDTR;
+            this_time_rx_len = DBUS_RX_BUF_NUM - hdma_usart3_rx.Instance->NDTR;
 
             //重新设定数据长度
-            hdma_usart3_rx.Instance->NDTR = SBUS_RX_BUF_NUM;
+            hdma_usart3_rx.Instance->NDTR = DBUS_RX_BUF_NUM;
 
             //设定缓冲�?0
             DMA1_Stream1->CR &= ~(DMA_SxCR_CT);
@@ -352,10 +353,11 @@ void USART3_IRQHandler(void)
             //使能DMA
             __HAL_DMA_ENABLE(&hdma_usart3_rx);
 
-            if(this_time_rx_len == SBUS_FRAME_SIZE)
+            if(this_time_rx_len == DBUS_FRAME_SIZE)
             {
                 //处理遥控器数�?
-                sbus_rc_decode(sbus_rx_buf[1]);
+                //sbus_rc_decode(sbus_rx_buf[1]);
+                dbus_rc_decode(dbus_rx_buf[1]);
 //                rt_timer_start(rc_timer);
             }
         }

@@ -71,6 +71,8 @@ include_directories(Core/Inc
         src/modules/motor/HT_motor
         src/modules/pwm
         src/modules/rc/sbus
+        src/modules/rc/dbus
+        src/modules/rc/keyboard
         src/task
         src/task/ins
         src/task/motor
